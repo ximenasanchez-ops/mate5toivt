@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Cofre de Polinomios — Micro-actividad interactiva</title>
+
+<!--
+============================================================================
+ COFRE DE POLINOMIOS — index.html
+ Recurso educativo autocontenido (HTML + CSS + JS embebidos, sin backend
+ ni librerías externas) para practicar operaciones con polinomios:
+ suma, resta, multiplicación, división entre polinomio y monomio y
+ división por Ruffini.
+
+ ---------------------------------------------------------------------------
+ INSTRUCCIONES PARA EL DOCENTE (edición rápida)
+ ---------------------------------------------------------------------------
+ Todo lo editable está agrupado al inicio del bloque <script> principal,
+ en el objeto CONFIG:
+   - CONFIG.COEF_MIN / COEF_MAX  → rango de coeficientes enteros generados.
+   - CONFIG.MAX_GRADO            → grado máximo de los polinomios base.
+   - CONFIG.TIEMPO_TOTAL_MIN     → minutos totales sugeridos (para la alarma
+                                    del temporizador, por defecto 30).
+   - CONFIG.CLAVE_DOCENTE        → "contraseña" simple para destrabar el
+                                    panel de respuestas (NO es seguridad
+                                    real: es solo para que el alumno no lo
+                                    abra sin querer). Cambiala si querés.
+   - Cada actividad tiene su propia función generadora (buscá los
+     comentarios "=== ACTIVIDAD N ===" en el JS) donde podés cambiar
+     cantidad de ítems, grados o el tiempo estimado que se muestra.
+
+ El panel "Ayuda / Pistas / Clave de respuestas" para el docente se abre
+ con el botón 🔑 de la cabecera, pidiendo la clave (por defecto: 1234).
+ Ahí también se explica cómo recuperar el progreso guardado.
+
+ El progreso del alumno se guarda en localStorage (clave
+ "cofrePolinomiosProgreso") con el botón "💾 Guardar progreso" y se
+ recupera con "📂 Cargar progreso". Es local al navegador/dispositivo:
+ no viaja a ningún servidor.
+============================================================================
+-->
+
+<style>
+/* ============================================================
+   1. VARIABLES DE DISEÑO Y RESET
+   ============================================================ */
+:root{
+  --bg:#101425;
+  --panel:#181d34;
+  --panel-light:#222947;
+  --primary:#7c5cff;
+  --primary-dark:#5f3ff0;
+  --accent:#2ee6a6;
+  --accent-dark:#18b884;
+  --warn:#ffb547;
+  --danger:#ff5c7a;
+  --text:#eef0ff;
+  --muted:#a6acd6;
+  --border:#333a5c;
+  --radius:16px;
+  --shadow:0 6px 20px rgba(0,0,0,.35);
+  color-scheme: dark;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:radial-gradient(circle at top, #1b2140 0%, #0c0f1e 70%);
+  color:var(--text);
+  font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif;
+  line-height:1.5;
+  padding-bottom:70px;
+  -webkit-tap-highlight-color:transparent;
+}
+h1,h2,h3{line-height:1.25;margin-top:0;}
+button{
+  font-family:inherit;font-size:1rem;cursor:pointer;border:none;border-radius:12px;
+  padding:.8rem 1.15rem; min-height:44px; /* objetivo táctil grande */
+  transition:transform .08s ease, box-shadow .15s ease, background .15s ease;
+}
+button:active{transform:scale(.96);}
+button:focus-visible, [tabindex]:focus-visible, input:focus-visible{
+  outline:3px solid var(--accent); outline-offset:2px;
+}
+.btn-primary{background:var(--primary);color:#fff;font-weight:700;}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-accent{background:var(--accent);color:#052b20;font-weight:700;}
+.btn-accent:hover{background:var(--accent-dark);}
+.btn-outline{background:transparent;color:var(--text);border:2px solid var(--border);}
+.btn-outline:hover{border-color:var(--primary);}
+.btn-danger{background:var(--danger);color:#fff;font-weight:700;}
+.btn-sm{padding:.5rem .8rem;font-size:.85rem;min-height:38px;}
+input[type=text], input[type=password]{
+  font-family:inherit;font-size:1rem;padding:.7rem .8rem;border-radius:10px;
+  border:2px solid var(--border);background:var(--panel-light);color:var(--text);
+  min-height:44px;
+}
+input[type=text]:focus, input[type=password]:focus{border-color:var(--primary);}
+code{background:#0e1226;border:1px solid var(--border);padding:.1rem .35rem;border-radius:6px;}
+a{color:var(--accent);}
+
+/* ============================================================
+   2. LAYOUT GENERAL
+   ============================================================ */
+header#top-bar{
+  position:sticky;top:0;z-index:80;
+  background:linear-gradient(120deg,var(--primary-dark),var(--primary));
+  padding:.7rem 1rem;
+  display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;justify-content:space-between;
+  box-shadow:var(--shadow);
+}
+header#top-bar h1{font-size:1.05rem;font-weight:800;color:#fff;}
+#timer-box{
+  display:flex;align-items:center;gap:.5rem;background:rgba(0,0,0,.25);
+  padding:.4rem .8rem;border-radius:12px;color:#fff;font-variant-numeric:tabular-nums;
+}
+#timer-box.alarma{background:var(--danger);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.55;}}
+#header-actions{display:flex;gap:.4rem;flex-wrap:wrap;}
+
+main{max-width:960px;margin:1.2rem auto;padding:0 .9rem;display:flex;flex-direction:column;gap:1.3rem;}
+.card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.3rem;border:1px solid var(--border);}
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* barra de progreso + puntaje */
+#status-row{display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:space-between;margin-bottom:.8rem;}
+.progress-track{flex:1;min-width:160px;height:12px;background:var(--panel-light);border-radius:8px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--primary));transition:width .35s ease;}
+#score-box{font-weight:800;color:var(--accent);white-space:nowrap;}
+
+nav#activity-nav{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1rem;}
+nav#activity-nav button{
+  background:var(--panel-light);color:var(--muted);font-size:.78rem;padding:.5rem .7rem;
+  border:2px solid transparent; min-height:auto;
+}
+nav#activity-nav button.current{border-color:var(--primary);color:#fff;font-weight:700;}
+nav#activity-nav button.done{background:#123a2e;color:var(--accent);}
+
+/* ============================================================
+   3. ACTIVIDADES — estilos comunes
+   ============================================================ */
+.activity{border:1px solid var(--border);border-radius:14px;padding:1.1rem;background:var(--panel-light);}
+.activity h2{font-size:1.05rem;color:#fff;}
+.activity .meta{font-size:.8rem;color:var(--muted);margin-bottom:.6rem;}
+.consigna{margin-bottom:.8rem;}
+.actions-row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.8rem;}
+.feedback{margin-top:.7rem;padding:.65rem .85rem;border-radius:10px;font-size:.92rem;display:none;}
+.feedback.ok{display:block;background:#123a2e;color:var(--accent);border:1px solid var(--accent);}
+.feedback.bad{display:block;background:#3a1420;color:var(--danger);border:1px solid var(--danger);}
+.feedback.hint{display:block;background:#3a2c10;color:var(--warn);border:1px solid var(--warn);}
+.solution-box{display:none;margin-top:.7rem;background:#0e1226;border-radius:10px;padding:.8rem;font-size:.9rem;border:1px dashed var(--border);}
+.solution-box.show{display:block;}
+.solution-box table{border-collapse:collapse;margin-top:.5rem;font-size:.85rem;}
+.solution-box td, .solution-box th{border:1px solid var(--border);padding:.3rem .55rem;text-align:center;}
+
+.poly-display{font-size:1.15rem;font-weight:700;background:#0e1226;border:1px dashed var(--border);padding:.6rem .8rem;border-radius:10px;overflow-x:auto;}
+
+@keyframes pop{0%{transform:scale(1);}45%{transform:scale(1.07);}100%{transform:scale(1);}}
+.pop{animation:pop .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+.shake{animation:shake .3s ease;}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+.bounce{animation:bounce .4s ease;}
+
+/* -------- 3a. Drag and drop (términos semejantes) -------- */
+.dnd-pool, .dnd-slots{display:flex;flex-wrap:wrap;gap:.6rem;margin:.6rem 0;min-height:52px;}
+.chip{
+  touch-action:none; user-select:none;
+  background:var(--primary);color:#fff;font-weight:700;padding:.6rem 1rem;border-radius:20px;
+  cursor:grab; box-shadow:0 3px 0 var(--primary-dark);
+}
+.chip:active{cursor:grabbing;}
+.chip.dragging{position:fixed;z-index:200;opacity:.92;pointer-events:none;}
+.chip.placed{opacity:.35;cursor:default;box-shadow:none;}
+.slot{
+  min-width:120px;min-height:52px;border:2px dashed var(--border);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;padding:.4rem .6rem;
+  background:#0e1226;font-weight:700;color:var(--muted);text-align:center;
+}
+.slot.filled{border-style:solid;border-color:var(--accent);color:#fff;}
+.slot.over{border-color:var(--accent);background:#123a2e;}
+
+/* -------- 3b. Matching con flechas (click-click) -------- */
+.match-wrap{display:flex;gap:2rem;justify-content:space-between;flex-wrap:wrap;}
+.match-col{flex:1;min-width:150px;display:flex;flex-direction:column;gap:.5rem;}
+.match-item{
+  background:var(--panel);border:2px solid var(--border);border-radius:12px;padding:.6rem .8rem;
+  text-align:center;font-weight:700;cursor:pointer;
+}
+.match-item[aria-pressed="true"]{border-color:var(--accent);background:#123a2e;}
+.match-item.linked-ok{border-color:var(--accent);background:#123a2e;opacity:.75;cursor:default;}
+.match-item.linked-bad{border-color:var(--danger);}
+
+/* -------- 3c. Imagen / bloques algebraicos -------- */
+.tiles-svg{background:#0e1226;border:1px solid var(--border);border-radius:12px;padding:.5rem;width:100%;max-width:520px;height:auto;}
+
+/* -------- 3d. Ruffini paso a paso -------- */
+.ruffini-table{border-collapse:collapse;margin:.7rem 0;width:100%;max-width:560px;}
+.ruffini-table td, .ruffini-table th{border:1px solid var(--border);padding:.4rem;text-align:center;font-size:.95rem;}
+.ruffini-table input{width:64px;text-align:center;padding:.4rem;}
+.ruffini-table th{background:var(--panel-light);}
+.ruffini-row-label{font-size:.75rem;color:var(--muted);text-align:right;padding-right:.5rem;}
+
+/* -------- 3e. Reto final / cofre -------- */
+#cofre-visual{font-size:4rem;text-align:center;margin:.6rem 0;transition:transform .4s ease;}
+.piece-list{display:flex;flex-wrap:wrap;gap:.5rem;margin:.6rem 0;}
+.piece{width:34px;height:34px;border-radius:8px;background:var(--panel-light);border:2px solid var(--border);}
+.piece.on{background:var(--accent);border-color:var(--accent-dark);}
+
+/* ============================================================
+   4. PANTALLA FINAL
+   ============================================================ */
+#final-score{font-size:2.4rem;font-weight:900;color:var(--accent);}
+#final-summary li, #final-recs li{margin-bottom:.4rem;}
+
+/* ============================================================
+   5. PANEL DOCENTE (modal)
+   ============================================================ */
+.modal-backdrop{
+  position:fixed;inset:0;background:rgba(5,7,18,.75);display:none;
+  align-items:center;justify-content:center;z-index:300;padding:1rem;
+}
+.modal-backdrop.show{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:1.3rem;max-width:640px;width:100%;max-height:85vh;overflow:auto;}
+.modal h2{color:var(--warn);}
+.modal table{border-collapse:collapse;width:100%;margin-top:.6rem;font-size:.85rem;}
+.modal td, .modal th{border:1px solid var(--border);padding:.4rem .6rem;text-align:left;}
+
+footer{max-width:960px;margin:1rem auto;padding:0 1rem 2rem;color:var(--muted);font-size:.82rem;}
+
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+
+/* ============================================================
+   6. RESPONSIVE — mobile-first (por defecto ya apilado);
+      a partir de 700px pasamos a columnas en donde ayuda.
+   ============================================================ */
+@media (min-width:700px){
+  #status-row{flex-wrap:nowrap;}
+  .match-wrap{flex-wrap:nowrap;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     CABECERA: título, temporizador y accesos rápidos
+     ============================================================ -->
+<header id="top-bar">
+  <h1>🗝️ Cofre de Polinomios</h1>
+  <div id="timer-box" role="status" aria-live="off">
+    ⏱️ <strong id="timer-display">00:00</strong> / <span id="timer-meta">30:00</span>
+  </div>
+  <div id="header-actions">
+    <button class="btn-outline btn-sm" id="btn-guardar" title="Guardar progreso en este navegador">💾 Guardar</button>
+    <button class="btn-outline btn-sm" id="btn-cargar" title="Cargar progreso guardado">📂 Cargar</button>
+    <button class="btn-outline btn-sm" id="btn-docente" title="Panel del docente">🔑 Docente</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================================================
+     PANTALLA 1 — PORTADA
+     ============================================================ -->
+<section id="screen-portada" class="screen active card" aria-labelledby="h-portada">
+  <h2 id="h-portada">¡Bienvenidos al Cofre de Polinomios! 🧮✨</h2>
+  <p>Vas a resolver <strong>9 mini-actividades</strong> sobre operaciones con polinomios
+     (suma, resta, multiplicación, división por un monomio y división por Ruffini).
+     El conjunto está pensado para llevarte <strong>alrededor de 30 minutos</strong>.
+     Cada actividad correcta suma piezas al cofre final... ¡a ver si lográs abrirlo! 🏆</p>
+  <ul>
+    <li>Vas a arrastrar fichas, unir con flechas, completar espacios, leer una imagen
+        y resolver Ruffini paso a paso.</li>
+    <li>Tenés hasta <strong>2 pistas</strong> por actividad y un botón «Ver solución» si te trabás.</li>
+    <li>Podés generar una <strong>versión nueva</strong> de los ejercicios cuando quieras (🎲).</li>
+    <li>Tu progreso se puede guardar en este navegador con «💾 Guardar».</li>
+  </ul>
+  <div class="actions-row">
+    <button class="btn-primary" id="btn-empezar" style="font-size:1.05rem;">▶️ Empezar</button>
+    <button class="btn-outline" id="btn-nueva-version">🎲 Generar nueva versión</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     PANTALLA 2 — ACTIVIDADES
+     ============================================================ -->
+<section id="screen-actividades" class="screen" aria-labelledby="h-act">
+  <div class="card">
+    <h2 id="h-act" class="visually-hidden">Actividades</h2>
+    <div id="status-row">
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+      <div id="score-box">⭐ Puntaje: <span id="score-value">0</span></div>
+    </div>
+    <nav id="activity-nav" aria-label="Selector de actividad"></nav>
+    <div id="activity-container"><!-- se llena dinámicamente --></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PANTALLA 3 — RESUMEN FINAL
+     ============================================================ -->
+<section id="screen-final" class="screen card" aria-labelledby="h-final">
+  <h2 id="h-final">🎉 ¡Cofre completado!</h2>
+  <div id="cofre-visual" aria-hidden="true">🔒</div>
+  <p>Tiempo total: <strong id="final-time">00:00</strong></p>
+  <p id="final-score">0%</p>
+  <p id="final-msg"></p>
+  <h3>Resumen por actividad</h3>
+  <ul id="final-summary"></ul>
+  <h3>Errores para repasar</h3>
+  <ul id="final-recs"></ul>
+  <p id="consejo-docente" style="background:#0e1226;border:1px dashed var(--border);padding:.8rem;border-radius:10px;"></p>
+  <div class="actions-row">
+    <button class="btn-primary" id="btn-reintentar">🔁 Nuevo intento (ejercicios nuevos)</button>
+    <button class="btn-outline" id="btn-volver">🏠 Volver a la portada</button>
+  </div>
+</section>
+
+</main>
+
+<footer>
+ <h2>Instituto Visión Tecnológica - Matemática de 5to 2026</h2>
+  <h3>Prof Ximena Sanchez</h3>
+</footer>
+
+<!-- ============================================================
+     MODAL — PANEL DEL DOCENTE (clave de respuestas, ayuda)
+     ============================================================ -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div id="modal-login">
+      <h2 id="modal-title">🔑 Panel del docente</h2>
+      <p>Ingresá la clave para ver la guía y la clave de respuestas.</p>
+      <input type="password" id="input-clave" aria-label="Clave del docente" placeholder="Clave">
+      <div class="actions-row">
+        <button class="btn-primary btn-sm" id="btn-clave-ok">Entrar</button>
+        <button class="btn-outline btn-sm" id="btn-clave-cancel">Cancelar</button>
+      </div>
+      <p id="clave-error" style="color:var(--danger);display:none;">Clave incorrecta.</p>
+    </div>
+    <div id="modal-panel" hidden>
+      <h2>👩‍🏫 Guía del docente</h2>
+      <p>Todos los parámetros de dificultad, cantidad de ítems y tiempos estimados se
+         ajustan en el objeto <code>CONFIG</code> al inicio del bloque
+         <code>&lt;script&gt;</code> del archivo, y en las funciones
+         <code>generarActividadN()</code> (una por actividad, buscá el comentario
+         <code>=== ACTIVIDAD N ===</code>).</p>
+      <p><strong>Progreso guardado:</strong> se guarda con la clave de localStorage
+         <code>cofrePolinomiosProgreso</code>. Los alumnos usan los botones
+         «💾 Guardar» / «📂 Cargar» de la cabecera; no requiere conexión ni servidor.</p>
+      <p><strong>Clave de respuestas:</strong> cada actividad ya incluye su solución
+         paso a paso detrás del botón «Ver solución» dentro de la actividad misma
+         (pensado para que el alumno la use como ayuda). Si querés revisar las
+         respuestas sin resolver, generá la actividad y abrí directamente ese botón.</p>
+      <table>
+        <tr><th>Actividad</th><th>Tipo</th><th>Tiempo</th></tr>
+        <tr><td>1</td><td>Arrastrar términos semejantes</td><td>3 min</td></tr>
+        <tr><td>2</td><td>Completar suma/resta</td><td>5 min</td></tr>
+        <tr><td>3</td><td>Unir operación ↔ resultado</td><td>4 min</td></tr>
+        <tr><td>4</td><td>División por monomio</td><td>4 min</td></tr>
+        <tr><td>5</td><td>Multiplicación</td><td>5 min</td></tr>
+        <tr><td>6</td><td>Bloques algebraicos (imagen)</td><td>3 min</td></tr>
+        <tr><td>7</td><td>Ruffini paso a paso</td><td>6 min</td></tr>
+        <tr><td>8</td><td>Reto final del cofre</td><td>4 min</td></tr>
+      </table>
+      <div class="actions-row"><button class="btn-outline btn-sm" id="btn-cerrar-modal">Cerrar</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================================================================================
+   COFRE DE POLINOMIOS — LÓGICA
+   Índice de secciones:
+     0. CONFIG            → parámetros editables por el docente
+     1. MOTOR MATEMÁTICO  → generación, formato, parseo y validación de polinomios
+     2. ESTADO GLOBAL      → progreso, puntaje, resultados por actividad
+     3. UTILIDADES DE UI   → feedback, pistas, registro de resultados
+     4. ACTIVIDADES 1-8    → una función generarActividadN(container) por cada una
+     5. NAVEGACIÓN Y TEMPORIZADOR
+     6. GUARDAR / CARGAR PROGRESO (localStorage)
+     7. PANEL DOCENTE (modal con clave)
+     8. PANTALLA FINAL
+   ================================================================================ */
+
+/* ---------------------------------------------------------------
+   0. CONFIG — AJUSTAR ACÁ dificultad, cantidad y tiempos
+   --------------------------------------------------------------- */
+const CONFIG = {
+  COEF_MIN: -9,
+  COEF_MAX: 12,
+  MAX_GRADO: 4,           // grado máximo de referencia para polinomios "grandes"
+  TIEMPO_TOTAL_MIN: 30,   // minutos para la alarma visual del temporizador
+  CLAVE_DOCENTE: '1234',  // clave simple del panel docente (no es seguridad real)
+};
+
+/* ---------------------------------------------------------------
+   1. MOTOR MATEMÁTICO
+   Representación: arreglo de coeficientes por grado -> [c0,c1,c2,...]
+   --------------------------------------------------------------- */
+function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function randNonZero(min, max){ let v=0; while(v===0) v=randInt(min,max); return v; }
+
+function randPoly(grado, min=CONFIG.COEF_MIN, max=CONFIG.COEF_MAX){
+  const p=[];
+  for(let i=0;i<grado;i++) p.push(randInt(min,max));
+  p.push(randNonZero(min,max));
+  return p;
+}
+function polyDegree(p){ for(let i=p.length-1;i>=0;i--) if(p[i]!==0) return i; return 0; }
+function trimPoly(p){ const d=polyDegree(p); return p.slice(0,d+1); }
+function polyAdd(a,b){ const n=Math.max(a.length,b.length),r=[]; for(let i=0;i<n;i++) r.push((a[i]||0)+(b[i]||0)); return trimPoly(r); }
+function polySub(a,b){ const n=Math.max(a.length,b.length),r=[]; for(let i=0;i<n;i++) r.push((a[i]||0)-(b[i]||0)); return trimPoly(r); }
+function polyMul(a,b){
+  const r=new Array(a.length+b.length-1).fill(0);
+  for(let i=0;i<a.length;i++) for(let j=0;j<b.length;j++) r[i+j]+=a[i]*b[j];
+  return trimPoly(r);
+}
+function ruffini(p, r){
+  const n=p.length-1;
+  const coefsDesc=[]; for(let i=n;i>=0;i--) coefsDesc.push(p[i]);
+  const bajados=[coefsDesc[0]];
+  for(let i=1;i<coefsDesc.length;i++) bajados.push(coefsDesc[i]+bajados[i-1]*r);
+  const resto=bajados[bajados.length-1];
+  const cocDesc=bajados.slice(0,-1);
+  const cociente=cocDesc.slice().reverse();
+  return { cociente: trimPoly(cociente.length?cociente:[0]), resto, coefsDesc, bajados };
+}
+function polyToStr(p){
+  p=trimPoly(p);
+  const terms=[];
+  for(let i=p.length-1;i>=0;i--){
+    const c=p[i]; if(c===0) continue;
+    const abs=Math.abs(c);
+    let piece;
+    if(i===0) piece=`${abs}`;
+    else if(i===1) piece=(abs===1?'':abs)+'x';
+    else piece=(abs===1?'':abs)+'x^'+i;
+    terms.push({sign:c<0?'-':'+', piece});
+  }
+  if(terms.length===0) return '0';
+  let str=(terms[0].sign==='-'?'-':'')+terms[0].piece;
+  for(let i=1;i<terms.length;i++) str+=` ${terms[i].sign} ${terms[i].piece}`;
+  return str;
+}
+function termToStr(c,deg){ const arr=[]; arr[deg]=c; for(let i=0;i<deg;i++) arr[i]=0; return polyToStr(arr); }
+
+// Parseo tolerante: espacios, orden libre, "x" implica coeficiente 1, ** -> ^.
+function parsePoly(str){
+  if(str===null||str===undefined) return null;
+  let s=str.toString().trim();
+  if(s==='') return null;
+  s=s.replace(/\s+/g,'').replace(/\*\*/g,'^').replace(/·|\*/g,'').replace(/,/g,'.');
+  if(!/^[+-]?[0-9xX^.+-]+$/.test(s)) return null;
+  const rawTerms=s.match(/[+-]?[^+-]+/g);
+  if(!rawTerms) return null;
+  const result=[];
+  for(let raw of rawTerms){
+    let sign=1, t=raw;
+    if(t[0]==='+') t=t.slice(1);
+    else if(t[0]==='-'){ sign=-1; t=t.slice(1); }
+    if(t==='') return null;
+    const m=t.match(/^(\d*\.?\d*)(x(\^(\d+))?)?$/i);
+    if(!m) return null;
+    let coefPart=m[1], hasX=!!m[2], expPart=m[4];
+    let coef = coefPart==='' ? (hasX?1:NaN) : parseFloat(coefPart);
+    if(isNaN(coef)) return null;
+    coef*=sign;
+    let deg = hasX ? (expPart?parseInt(expPart,10):1) : 0;
+    result[deg]=(result[deg]||0)+coef;
+  }
+  const maxDeg=result.length-1, arr=[];
+  for(let i=0;i<=maxDeg;i++) arr.push(result[i]||0);
+  return trimPoly(arr.length?arr:[0]);
+}
+function polyEquals(a,b){
+  const ta=trimPoly(a), tb=trimPoly(b);
+  if(ta.length!==tb.length) return false;
+  for(let i=0;i<ta.length;i++) if(Math.abs(ta[i]-tb[i])>1e-9) return false;
+  return true;
+}
+// Validación tolerante: normaliza por coeficientes/grado, así "3x+2y"≈"2y+3x"
+// se resuelve igual (mismo polinomio en cualquier orden de escritura).
+function checkAnswer(userInput, correctPoly){
+  const parsed=parsePoly(userInput);
+  if(parsed===null) return {ok:false, reason:'formato'};
+  return {ok:polyEquals(parsed, correctPoly), reason:'valor'};
+}
+
+/* ---------------------------------------------------------------
+   2. ESTADO GLOBAL
+   --------------------------------------------------------------- */
+const STATE = {
+  currentActivity: 0,
+  results: {},   // { actId: [ {correct, hintsUsed, showedSolution} ] }
+  score: 0,
+  seed: Date.now(),
+};
+
+const ACTIVIDADES = [
+  { id:'a1', label:'1. Términos semejantes', minutos:3, generar: generarActividad1, items:2 },
+  { id:'a2', label:'2. Suma y resta',         minutos:5, generar: generarActividad2, items:3 },
+  { id:'a3', label:'3. Unir con flechas',     minutos:4, generar: generarActividad3, items:1 },
+  { id:'a4', label:'4. División por monomio', minutos:4, generar: generarActividad4, items:2 },
+  { id:'a5', label:'5. Multiplicación',       minutos:5, generar: generarActividad5, items:2 },
+  { id:'a6', label:'6. Bloques algebraicos',  minutos:3, generar: generarActividad6, items:1 },
+  { id:'a7', label:'7. Ruffini paso a paso',  minutos:6, generar: generarActividad7, items:1 },
+  { id:'a8', label:'8. Reto final del cofre', minutos:4, generar: generarActividad8, items:1 },
+];
+
+/* ---------------------------------------------------------------
+   3. UTILIDADES DE UI
+   --------------------------------------------------------------- */
+function registerResult(actId, idx, data, puntos){
+  if(!STATE.results[actId]) STATE.results[actId]=[];
+  const prev = STATE.results[actId][idx];
+  const wasCorrect = prev && prev.correct;
+  STATE.results[actId][idx]=data;
+  if(data.correct && !wasCorrect){
+    STATE.score += (puntos||10);
+  }
+  updateStatusRow();
+}
+function feedback(el, type, msg){
+  el.className='feedback '+type;
+  el.textContent=msg;
+}
+function puntosSegunPistas(hintsUsed){ return Math.max(10-hintsUsed*3, 4); }
+
+function updateStatusRow(){
+  let total = ACTIVIDADES.reduce((s,a)=>s+a.items,0);
+  let correctos=0;
+  ACTIVIDADES.forEach(a=>{
+    (STATE.results[a.id]||[]).forEach(r=>{ if(r&&r.correct) correctos++; });
+  });
+  document.getElementById('progress-fill').style.width = (100*correctos/total)+'%';
+  document.getElementById('score-value').textContent = STATE.score;
+  renderNav();
+}
+function isActivityDone(actId){
+  const def = ACTIVIDADES.find(a=>a.id===actId);
+  const r = STATE.results[actId]||[];
+  return r.filter(Boolean).length>=def.items && r.every(x=>x&&x.correct);
+}
+function renderNav(){
+  const nav=document.getElementById('activity-nav');
+  nav.innerHTML='';
+  ACTIVIDADES.forEach((a,i)=>{
+    const btn=document.createElement('button');
+    btn.textContent=a.label;
+    btn.className = i===STATE.currentActivity ? 'current' : '';
+    if(isActivityDone(a.id)) btn.classList.add('done');
+    btn.addEventListener('click', ()=>goToActivity(i));
+    nav.appendChild(btn);
+  });
+}
+
+/* Helper genérico: ejercicio tipo "completar" (fill-in-the-blank) con
+   input de texto, comprobación, pistas (máx 2) y solución. Se reutiliza
+   en varias actividades (suma/resta, monomio, multiplicación). */
+function buildFillBlank({container, actId, idx, promptHTML, correctPoly, hints, solutionHTML, placeholder}){
+  const wrap=document.createElement('div');
+  wrap.className='exercise-item';
+  wrap.style.marginTop = idx>0 ? '1rem' : '0';
+  wrap.style.paddingTop = idx>0 ? '1rem' : '0';
+  wrap.style.borderTop = idx>0 ? '1px dashed var(--border)' : 'none';
+  const fid=`${actId}-ex${idx}`;
+  wrap.innerHTML=`
+    <div>${promptHTML}</div>
+    <div class="actions-row" style="margin-top:.5rem;">
+      <label for="${fid}-input" class="visually-hidden">Respuesta ${idx+1}</label>
+      <input type="text" id="${fid}-input" placeholder="${placeholder||'Ej: 3x^2 - x + 5'}" style="flex:1;min-width:180px;">
+      <button class="btn-primary btn-sm" data-a="check">✅ Comprobar</button>
+      <button class="btn-outline btn-sm" data-a="hint">💡 Pista (<span data-hl>2</span>)</button>
+      <button class="btn-outline btn-sm" data-a="sol">📖 Ver solución</button>
+    </div>
+    <div class="feedback" id="${fid}-fb" role="status"></div>
+    <div class="solution-box" id="${fid}-sol">${solutionHTML}</div>
+  `;
+  container.appendChild(wrap);
+  let hintsUsed=0, solved=false, solShown=false;
+  const input=wrap.querySelector('input');
+  const fb=wrap.querySelector(`#${fid}-fb`);
+  const solBox=wrap.querySelector(`#${fid}-sol`);
+  const hl=wrap.querySelector('[data-hl]');
+
+  wrap.querySelector('[data-a="check"]').addEventListener('click', ()=>{
+    const res=checkAnswer(input.value, correctPoly);
+    if(res.ok){
+      feedback(fb,'ok','¡Genial! Respuesta correcta. 🎉');
+      wrap.classList.add('pop'); setTimeout(()=>wrap.classList.remove('pop'),300);
+      solved=true;
+      registerResult(actId, idx, {correct:true,hintsUsed,showedSolution:solShown}, puntosSegunPistas(hintsUsed));
+    } else if(res.reason==='formato'){
+      feedback(fb,'bad','No pude leer esa respuesta. Probá con algo como "3x^2 - x + 5".');
+      wrap.classList.add('shake'); setTimeout(()=>wrap.classList.remove('shake'),300);
+    } else {
+      feedback(fb,'bad','Todavía no es correcto. Revisá signos y exponentes: ¡seguí probando!');
+      wrap.classList.add('shake'); setTimeout(()=>wrap.classList.remove('shake'),300);
+      registerResult(actId, idx, {correct:false,hintsUsed,showedSolution:solShown}, 0);
+    }
+  });
+  wrap.querySelector('[data-a="hint"]').addEventListener('click', ()=>{
+    if(hintsUsed>=2){ feedback(fb,'hint','Ya usaste tus 2 pistas para este ítem.'); return; }
+    feedback(fb,'hint', hints[hintsUsed]);
+    hintsUsed++; hl.textContent=(2-hintsUsed);
+    registerResult(actId, idx, {correct:solved,hintsUsed,showedSolution:solShown}, solved?puntosSegunPistas(hintsUsed):0);
+  });
+  wrap.querySelector('[data-a="sol"]').addEventListener('click', ()=>{
+    solBox.classList.toggle('show'); solShown=true;
+    registerResult(actId, idx, {correct:solved,hintsUsed,showedSolution:true}, solved?puntosSegunPistas(hintsUsed):0);
+  });
+}
+
+/* ================================================================
+   4. ACTIVIDADES
+   ================================================================ */
+
+/* === ACTIVIDAD 1: arrastrar y soltar — términos semejantes ===
+   El alumno arrastra fichas de términos hasta el "casillero" del
+   grado correcto para formar el polinomio suma ya simplificado.
+   AJUSTE: cambiar N_ITEMS_A1 para más/menos ítems; grados de a/b abajo. */
+function generarActividad1(container){
+  const N_ITEMS_A1 = 2;
+  container.innerHTML = `<p class="consigna">Arrastrá cada ficha hasta el casillero de su grado correspondiente
+    para formar, agrupando términos semejantes, el resultado de la suma indicada.
+    (En pantallas táctiles: tocá y arrastrá con el dedo).</p>`;
+
+  for(let idx=0; idx<N_ITEMS_A1; idx++){
+    const gA=randInt(1,2), gB=randInt(1,2);
+    const a=randPoly(gA), b=randPoly(gB);
+    const suma=polyAdd(a,b);
+    const gradoMax=Math.max(polyDegree(a),polyDegree(b));
+
+    const holder=document.createElement('div');
+    holder.style.marginTop = idx>0?'1.1rem':'0';
+    holder.style.paddingTop = idx>0?'1.1rem':'0';
+    holder.style.borderTop = idx>0?'1px dashed var(--border)':'none';
+    const fid=`a1-ex${idx}`;
+    holder.innerHTML = `
+      <div class="poly-display">(${polyToStr(a)}) + (${polyToStr(b)})</div>
+      <div class="dnd-pool" id="${fid}-pool" aria-label="Fichas para arrastrar"></div>
+      <div class="dnd-slots" id="${fid}-slots" aria-label="Casilleros por grado"></div>
+      <div class="actions-row">
+        <button class="btn-outline btn-sm" data-a="hint">💡 Pista (<span data-hl>2</span>)</button>
+        <button class="btn-outline btn-sm" data-a="sol">📖 Ver solución</button>
+      </div>
+      <div class="feedback" id="${fid}-fb" role="status"></div>
+      <div class="solution-box" id="${fid}-sol">
+        Se agrupan los términos de cada grado: <code>${polyToStr(a)} + (${polyToStr(b)}) = ${polyToStr(suma)}</code>
+      </div>
+    `;
+    container.appendChild(holder);
+
+    // fichas: todos los términos no nulos de a y b, mezclados
+    const fichas=[];
+    a.forEach((c,i)=>{ if(c!==0) fichas.push({c,i}); });
+    b.forEach((c,i)=>{ if(c!==0) fichas.push({c,i}); });
+    fichas.sort(()=>Math.random()-0.5);
+
+    const pool=holder.querySelector(`#${fid}-pool`);
+    const slotsWrap=holder.querySelector(`#${fid}-slots`);
+    fichas.forEach((f,fi)=>{
+      const chip=document.createElement('div');
+      chip.className='chip'; chip.textContent=termToStr(f.c,f.i);
+      chip.dataset.grado=f.i; chip.dataset.val=f.c; chip.dataset.id=fi;
+      chip.tabIndex=0; chip.setAttribute('role','button');
+      chip.setAttribute('aria-label', `Ficha ${termToStr(f.c,f.i)}, grado ${f.i}`);
+      pool.appendChild(chip);
+    });
+    // casilleros: uno por grado presente en `suma` (0..gradoMax)
+    const gradosNecesarios = [];
+    for(let g=gradoMax; g>=0; g--) gradosNecesarios.push(g);
+    const acumulado = {}; // grado -> suma acumulada de fichas soltadas ahí
+    gradosNecesarios.forEach(g=>{
+      const slot=document.createElement('div');
+      slot.className='slot'; slot.dataset.grado=g;
+      slot.textContent = g===0 ? 'término independiente' : (g===1?'grado 1 (x)':`grado ${g}`);
+      slotsWrap.appendChild(slot);
+      acumulado[g]=0;
+    });
+
+    setupDragDrop(pool, slotsWrap, (chip, slot)=>{
+      const g = parseInt(slot.dataset.grado,10);
+      const v = parseFloat(chip.dataset.val);
+      acumulado[g]+=v;
+      chip.classList.add('placed');
+      slot.classList.add('filled');
+      slot.textContent = termToStr(acumulado[g], g) + (g===0?'':'');
+    });
+
+    let hintsUsed=0, solved=false, solShown=false;
+    const fb=holder.querySelector(`#${fid}-fb`);
+    const hl=holder.querySelector('[data-hl]');
+    const solBox=holder.querySelector(`#${fid}-sol`);
+
+    // botón de comprobación implícito: revisamos automáticamente al soltar la última ficha
+    pool_observer:{
+      const checkNow=()=>{
+        const placedCount = pool.querySelectorAll('.chip.placed').length;
+        if(placedCount < fichas.length) return;
+        let ok=true;
+        for(const g of gradosNecesarios){
+          const esperado = suma[g]||0;
+          if(Math.abs(acumulado[g]-esperado) > 1e-9) ok=false;
+        }
+        if(ok){
+          feedback(fb,'ok','¡Perfecto! Agrupaste bien los términos semejantes. 🎉');
+          holder.classList.add('bounce'); setTimeout(()=>holder.classList.remove('bounce'),400);
+          solved=true;
+          registerResult('a1', idx, {correct:true,hintsUsed,showedSolution:solShown}, puntosSegunPistas(hintsUsed));
+        } else {
+          feedback(fb,'bad','Casi... revisá en qué casillero cayó cada ficha (el grado debe coincidir).');
+          registerResult('a1', idx, {correct:false,hintsUsed,showedSolution:solShown}, 0);
+        }
+      };
+      // Observamos cambios en el pool para disparar la comprobación
+      const mo = new MutationObserver(checkNow);
+      mo.observe(pool, {attributes:true, subtree:true, attributeFilter:['class']});
+    }
+
+    holder.querySelector('[data-a="hint"]').addEventListener('click', ()=>{
+      if(hintsUsed>=2){ feedback(fb,'hint','Ya usaste tus 2 pistas.'); return; }
+      const msg = hintsUsed===0
+        ? `El resultado final tiene grado ${polyDegree(suma)}.`
+        : `Revisá el casillero de grado ${polyDegree(suma)}: ahí debería quedar ${termToStr(suma[polyDegree(suma)],polyDegree(suma))}.`;
+      feedback(fb,'hint', msg);
+      hintsUsed++; hl.textContent=(2-hintsUsed);
+      registerResult('a1', idx, {correct:solved,hintsUsed,showedSolution:solShown}, solved?puntosSegunPistas(hintsUsed):0);
+    });
+    holder.querySelector('[data-a="sol"]').addEventListener('click', ()=>{
+      solBox.classList.toggle('show'); solShown=true;
+      registerResult('a1', idx, {correct:solved,hintsUsed,showedSolution:true}, solved?puntosSegunPistas(hintsUsed):0);
+    });
+  }
+}
+
+/* Sistema de arrastre genérico con Pointer Events (mouse + touch).
+   `onDrop(chip, slot)` se llama cuando una ficha se suelta sobre un slot. */
+function setupDragDrop(pool, slotsWrap, onDrop){
+  let dragEl=null, offsetX=0, offsetY=0, originParent=null;
+
+  pool.querySelectorAll('.chip').forEach(chip=>{
+    chip.addEventListener('pointerdown', (e)=>{
+      if(chip.classList.contains('placed')) return;
+      dragEl=chip; originParent=chip.parentElement;
+      const rect=chip.getBoundingClientRect();
+      offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top;
+      chip.setPointerCapture(e.pointerId);
+      chip.classList.add('dragging');
+      chip.style.width=rect.width+'px';
+      chip.style.left=rect.left+'px'; chip.style.top=rect.top+'px';
+    });
+    // soporte de teclado: Enter selecciona la ficha, luego Enter sobre un slot la coloca
+    chip.addEventListener('keydown', (e)=>{
+      if(e.key!=='Enter' && e.key!==' ') return;
+      e.preventDefault();
+      if(chip.classList.contains('placed')) return;
+      const slots=[...slotsWrap.querySelectorAll('.slot:not(.filled)')];
+      if(slots.length){ onDrop(chip, slots[0]); }
+    });
+  });
+  document.addEventListener('pointermove', (e)=>{
+    if(!dragEl) return;
+    dragEl.style.left=(e.clientX-offsetX)+'px';
+    dragEl.style.top=(e.clientY-offsetY)+'px';
+    slotsWrap.querySelectorAll('.slot').forEach(s=>s.classList.remove('over'));
+    const under=document.elementFromPoint(e.clientX, e.clientY);
+    const slot=under && under.closest ? under.closest('.slot') : null;
+    if(slot) slot.classList.add('over');
+  });
+  document.addEventListener('pointerup', (e)=>{
+    if(!dragEl) return;
+    const under=document.elementFromPoint(e.clientX, e.clientY);
+    const slot=under && under.closest ? under.closest('.slot') : null;
+    dragEl.classList.remove('dragging');
+    dragEl.style.position=''; dragEl.style.left=''; dragEl.style.top=''; dragEl.style.width='';
+    slotsWrap.querySelectorAll('.slot').forEach(s=>s.classList.remove('over'));
+    if(slot){ onDrop(dragEl, slot); }
+    else { originParent.appendChild(dragEl); }
+    dragEl=null;
+  });
+}
+
+/* === ACTIVIDAD 2: completar — suma y resta === */
+function generarActividad2(container){
+  const N_ITEMS_A2 = 3;
+  container.innerHTML = `<p class="consigna">Completá el resultado de cada suma o resta, ya reducido.</p>`;
+  for(let idx=0; idx<N_ITEMS_A2; idx++){
+    const grado=randInt(2, CONFIG.MAX_GRADO-1);
+    const a=randPoly(grado), b=randPoly(randInt(1,grado));
+    const isSum=Math.random()<0.5;
+    const result = isSum ? polyAdd(a,b) : polySub(a,b);
+    const opSym = isSum?'+':'-';
+    const hints=[
+      `Sumá/restá solo coeficientes de términos con el mismo grado de x.`,
+      isSum? `El grado del resultado es ${polyDegree(result)}.` : `Recordá cambiar el signo de cada término de B antes de sumar.`
+    ];
+    const solutionHTML = `
+      <p><code>(${polyToStr(a)}) ${opSym} (${polyToStr(b)})</code></p>
+      ${!isSum? `<p>Cambiando el signo de B: <code>${polyToStr(b.map(c=>-c))}</code></p>`:''}
+      <p>Resultado: <code>${polyToStr(result)}</code></p>
+    `;
+    buildFillBlank({container, actId:'a2', idx,
+      promptHTML:`<div class="poly-display">(${polyToStr(a)}) ${opSym} (${polyToStr(b)}) = ?</div>`,
+      correctPoly:result, hints, solutionHTML});
+  }
+}
+
+/* === ACTIVIDAD 3: unir con flechas — operación ↔ resultado ===
+   Click-click: se selecciona una operación y luego su resultado. */
+function generarActividad3(container){
+  const N_PARES = 4; // AJUSTE: cantidad de pares a unir
+  container.innerHTML = `<p class="consigna">Tocá una operación y luego el resultado que le corresponde, para "unirlos" con una flecha.</p>`;
+
+  const pares=[];
+  for(let i=0;i<N_PARES;i++){
+    const tipo = i%2===0 ? 'suma' : 'resta';
+    const grado=randInt(1,2);
+    const a=randPoly(grado), b=randPoly(randInt(1,grado));
+    const r = tipo==='suma' ? polyAdd(a,b) : polySub(a,b);
+    pares.push({ opStr: `(${polyToStr(a)}) ${tipo==='suma'?'+':'-'} (${polyToStr(b)})`, resStr: polyToStr(r), id:i });
+  }
+  const izquierda = pares.slice().sort(()=>Math.random()-0.5);
+  const derecha = pares.slice().sort(()=>Math.random()-0.5);
+
+  const wrap=document.createElement('div');
+  wrap.innerHTML = `
+    <div class="match-wrap">
+      <div class="match-col" id="a3-izq" aria-label="Operaciones"></div>
+      <div class="match-col" id="a3-der" aria-label="Resultados"></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn-outline btn-sm" data-a="hint">💡 Pista (<span data-hl>2</span>)</button>
+      <button class="btn-outline btn-sm" data-a="sol">📖 Ver solución</button>
+    </div>
+    <div class="feedback" id="a3-fb" role="status"></div>
+    <div class="solution-box" id="a3-sol">
+      ${pares.map(p=>`<div>${p.opStr} = <code>${p.resStr}</code></div>`).join('')}
+    </div>
+  `;
+  container.appendChild(wrap);
+
+  const izqCol=wrap.querySelector('#a3-izq'), derCol=wrap.querySelector('#a3-der');
+  izquierda.forEach(p=>{
+    const el=document.createElement('div');
+    el.className='match-item'; el.textContent=p.opStr; el.dataset.id=p.id;
+    el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-pressed','false');
+    izqCol.appendChild(el);
+  });
+  derecha.forEach(p=>{
+    const el=document.createElement('div');
+    el.className='match-item'; el.textContent=p.resStr; el.dataset.id=p.id;
+    el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-pressed','false');
+    derCol.appendChild(el);
+  });
+
+  let seleccionOp=null;
+  let correctos=0;
+  const fb=wrap.querySelector('#a3-fb');
+  let hintsUsed=0, solShown=false;
+  function registrarProgreso(){
+    const done = correctos===N_PARES;
+    registerResult('a3', 0, {correct:done, hintsUsed, showedSolution:solShown}, done?puntosSegunPistas(hintsUsed):0);
+  }
+  izqCol.querySelectorAll('.match-item').forEach(el=>{
+    const activar=()=>{
+      if(el.classList.contains('linked-ok')) return;
+      izqCol.querySelectorAll('.match-item').forEach(x=>x.setAttribute('aria-pressed','false'));
+      el.setAttribute('aria-pressed','true');
+      seleccionOp=el;
+    };
+    el.addEventListener('click', activar);
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); activar(); }});
+  });
+  derCol.querySelectorAll('.match-item').forEach(el=>{
+    const activar=()=>{
+      if(!seleccionOp || el.classList.contains('linked-ok')) return;
+      if(seleccionOp.dataset.id===el.dataset.id){
+        seleccionOp.classList.add('linked-ok'); seleccionOp.setAttribute('aria-pressed','false');
+        el.classList.add('linked-ok');
+        correctos++;
+        feedback(fb,'ok', `¡Correcto! (${correctos}/${N_PARES} unidos) 🎉`);
+        seleccionOp=null;
+        registrarProgreso();
+      } else {
+        el.classList.add('linked-bad');
+        feedback(fb,'bad','Esa unión no es correcta. Probá de nuevo.');
+        setTimeout(()=>el.classList.remove('linked-bad'), 500);
+      }
+    };
+    el.addEventListener('click', activar);
+    el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); activar(); }});
+  });
+  wrap.querySelector('[data-a="hint"]').addEventListener('click', ()=>{
+    if(hintsUsed>=2){ feedback(fb,'hint','Ya usaste tus 2 pistas.'); return; }
+    feedback(fb,'hint', hintsUsed===0? 'Fijate el grado del resultado: debe coincidir con el mayor grado de la operación.' : `Hay ${N_PARES} pares en total; llevás ${correctos} unidos.`);
+    hintsUsed++; wrap.querySelector('[data-hl]').textContent=(2-hintsUsed);
+    registrarProgreso();
+  });
+  wrap.querySelector('[data-a="sol"]').addEventListener('click', ()=>{
+    wrap.querySelector('#a3-sol').classList.toggle('show'); solShown=true;
+    registrarProgreso();
+  });
+}
+
+/* === ACTIVIDAD 4: división entre polinomio y monomio === */
+function generarActividad4(container){
+  const N_ITEMS_A4 = 2;
+  container.innerHTML = `<p class="consigna">Dividí cada término del dividendo por el monomio indicado (todos los casos son exactos, sin resto).</p>`;
+  for(let idx=0; idx<N_ITEMS_A4; idx++){
+    const monCoef=randNonZero(-6,6);
+    const monGrado=randInt(0,1);
+    const cocGrado=randInt(1,2);
+    const cociente=randPoly(cocGrado);
+    const monomio=[]; monomio[monGrado]=monCoef; for(let i=0;i<monGrado;i++) monomio[i]=0;
+    const dividendo=polyMul(cociente, monomio);
+    const pasos = dividendo.map((c,i)=>{
+      if(i<monGrado) return null;
+      const cRes=c/monCoef, gRes=i-monGrado;
+      return `${termToStr(c,i)} ÷ ${termToStr(monCoef,monGrado)} = ${termToStr(cRes,gRes)}`;
+    }).filter(Boolean).reverse();
+    const hints=[
+      `Dividí ${termToStr(monCoef,monGrado)} contra cada término del dividendo, uno por uno.`,
+      `Restá los exponentes de x en cada término: el cociente tendrá grado ${polyDegree(cociente)}.`
+    ];
+    const solutionHTML = `
+      <p>${pasos.join('<br>')}</p>
+      <p>Resultado: <code>${polyToStr(cociente)}</code></p>
+      <p>Verificación: (${polyToStr(monomio)})·(${polyToStr(cociente)}) = ${polyToStr(polyMul(monomio,cociente))} ✔️</p>
+    `;
+    buildFillBlank({container, actId:'a4', idx,
+      promptHTML:`<div class="poly-display">(${polyToStr(dividendo)}) ÷ (${polyToStr(monomio)}) = ?</div>`,
+      correctPoly:cociente, hints, solutionHTML});
+  }
+}
+
+/* === ACTIVIDAD 5: multiplicación (monomio×polinomio y binomio×trinomio) === */
+function generarActividad5(container){
+  container.innerHTML = `<p class="consigna">Multiplicá aplicando la propiedad distributiva y escribí el resultado reducido.</p>`;
+  // Ítem 1: monomio × polinomio
+  {
+    const mon=[]; const mg=randInt(0,1); mon[mg]=randNonZero(-6,6); for(let i=0;i<mg;i++) mon[i]=0;
+    const poly=randPoly(randInt(1,2));
+    const result=polyMul(mon, poly);
+    const pasos = poly.map((c,i)=> c===0?null:`${termToStr(mon[mg],mg)} · ${termToStr(c,i)} = ${termToStr(mon[mg]*c, mg+i)}`).filter(Boolean);
+    buildFillBlank({container, actId:'a5', idx:0,
+      promptHTML:`<div class="poly-display">(${polyToStr(mon)}) · (${polyToStr(poly)}) = ?</div>`,
+      correctPoly:result,
+      hints:[`Multiplicá el monomio por cada término del polinomio.`, `El grado del resultado es ${polyDegree(mon)}+${polyDegree(poly)} = ${polyDegree(result)}.`],
+      solutionHTML:`<p>${pasos.join('<br>')}</p><p>Resultado: <code>${polyToStr(result)}</code></p>`});
+  }
+  // Ítem 2: binomio (grado1) × trinomio (grado2)
+  {
+    const a=randPoly(1), b=randPoly(2);
+    const result=polyMul(a,b);
+    const pasos=[];
+    for(let i=0;i<a.length;i++){ if(a[i]===0) continue;
+      for(let j=0;j<b.length;j++){ if(b[j]===0) continue;
+        pasos.push(`${termToStr(a[i],i)} · ${termToStr(b[j],j)} = ${termToStr(a[i]*b[j], i+j)}`);
+      }
+    }
+    buildFillBlank({container, actId:'a5', idx:1,
+      promptHTML:`<div class="poly-display">(${polyToStr(a)}) · (${polyToStr(b)}) = ?</div>`,
+      correctPoly:result,
+      hints:[`Multiplicá cada término de (${polyToStr(a)}) por cada término de (${polyToStr(b)}).`, `El grado del resultado es ${polyDegree(a)}+${polyDegree(b)} = ${polyDegree(result)}.`],
+      solutionHTML:`<p>${pasos.join('<br>')}</p><p>Resultado: <code>${polyToStr(result)}</code></p>`});
+  }
+}
+
+/* === ACTIVIDAD 6: interpretar una imagen (bloques algebraicos) ===
+   Se dibuja un SVG simple con "bloques": cuadrados grandes = x^2,
+   barras = x, cuadraditos = unidades, para que el alumno sume y
+   escriba el polinomio que representan. */
+function generarActividad6(container){
+  const nX2=randInt(1,3), nX=randInt(1,4), nUnid=randInt(1,6);
+  const resultado=[nUnid, nX, nX2]; // c0, c1, c2
+  container.innerHTML = `<p class="consigna">Observá los bloques algebraicos (🟪 = x², 🟩 = x, 🟨 = unidad) y escribí el polinomio que representan, sumando todas las piezas.</p>`;
+
+  const svgW=520, svgH=140;
+  let svgParts='';
+  let cursorX=10;
+  for(let i=0;i<nX2;i++){ svgParts+=`<rect x="${cursorX}" y="10" width="60" height="60" rx="8" fill="#7c5cff" stroke="#5f3ff0" stroke-width="2"/><text x="${cursorX+30}" y="45" text-anchor="middle" fill="#fff" font-size="16" font-weight="bold">x²</text>`; cursorX+=72; }
+  cursorX+=10;
+  for(let i=0;i<nX;i++){ svgParts+=`<rect x="${cursorX}" y="30" width="18" height="60" rx="6" fill="#2ee6a6" stroke="#18b884" stroke-width="2"/><text x="${cursorX+9}" y="65" text-anchor="middle" fill="#052b20" font-size="13" font-weight="bold">x</text>`; cursorX+=26; }
+  cursorX+=10;
+  for(let i=0;i<nUnid;i++){ svgParts+=`<rect x="${cursorX}" y="60" width="18" height="18" rx="4" fill="#ffb547" stroke="#c98620" stroke-width="2"/>`; cursorX+=24; }
+
+  const wrap=document.createElement('div');
+  const fid='a6-ex0';
+  wrap.innerHTML = `
+    <svg class="tiles-svg" viewBox="0 0 ${svgW} ${svgH}" role="img"
+         aria-label="Bloques algebraicos: ${nX2} bloques cuadrados grandes de x al cuadrado, ${nX} barras de x, y ${nUnid} cuadraditos de unidad">
+      ${svgParts}
+    </svg>
+    <div class="actions-row" style="margin-top:.6rem;">
+      <label for="${fid}-input" class="visually-hidden">Polinomio representado</label>
+      <input type="text" id="${fid}-input" placeholder="Ej: 3x^2 + 2x + 4" style="flex:1;min-width:180px;">
+      <button class="btn-primary btn-sm" data-a="check">✅ Comprobar</button>
+      <button class="btn-outline btn-sm" data-a="hint">💡 Pista (<span data-hl>2</span>)</button>
+      <button class="btn-outline btn-sm" data-a="sol">📖 Ver solución</button>
+    </div>
+    <div class="feedback" id="${fid}-fb" role="status"></div>
+    <div class="solution-box" id="${fid}-sol">
+      Hay ${nX2} bloque(s) x², ${nX} barra(s) x y ${nUnid} unidad(es):
+      <code>${polyToStr(resultado)}</code>
+    </div>
+  `;
+  container.appendChild(wrap);
+
+  let hintsUsed=0, solved=false, solShown=false;
+  const input=wrap.querySelector('input'), fb=wrap.querySelector(`#${fid}-fb`), solBox=wrap.querySelector(`#${fid}-sol`), hl=wrap.querySelector('[data-hl]');
+  wrap.querySelector('[data-a="check"]').addEventListener('click', ()=>{
+    const res=checkAnswer(input.value, resultado);
+    if(res.ok){
+      feedback(fb,'ok','¡Exacto! Leíste bien los bloques. 🎉');
+      wrap.classList.add('pop'); setTimeout(()=>wrap.classList.remove('pop'),300);
+      solved=true;
+      registerResult('a6',0,{correct:true,hintsUsed,showedSolution:solShown}, puntosSegunPistas(hintsUsed));
+    } else {
+      feedback(fb,'bad', res.reason==='formato' ? 'No pude leer esa respuesta, probá con "ax^2 + bx + c".' : 'Contá de nuevo cada tipo de bloque: ¿cuántos x², cuántos x, cuántas unidades?');
+      wrap.classList.add('shake'); setTimeout(()=>wrap.classList.remove('shake'),300);
+      registerResult('a6',0,{correct:false,hintsUsed,showedSolution:solShown}, 0);
+    }
+  });
+  wrap.querySelector('[data-a="hint"]').addEventListener('click', ()=>{
+    if(hintsUsed>=2){ feedback(fb,'hint','Ya usaste tus 2 pistas.'); return; }
+    feedback(fb,'hint', hintsUsed===0 ? 'Cada bloque cuadrado grande vale x², cada barra vale x y cada cuadradito vale 1.' : `Hay ${nX2} bloques x², ${nX} barras x y ${nUnid} unidades.`);
+    hintsUsed++; hl.textContent=(2-hintsUsed);
+    registerResult('a6',0,{correct:solved,hintsUsed,showedSolution:solShown}, solved?puntosSegunPistas(hintsUsed):0);
+  });
+  wrap.querySelector('[data-a="sol"]').addEventListener('click', ()=>{
+    solBox.classList.toggle('show'); solShown=true;
+    registerResult('a6',0,{correct:solved,hintsUsed,showedSolution:true}, solved?puntosSegunPistas(hintsUsed):0);
+  });
+}
+
+/* === ACTIVIDAD 7: Ruffini paso a paso ===
+   El alumno completa cada celda de la tabla (bajada, producto, suma)
+   y se valida celda por celda. */
+function generarActividad7(container){
+  const grado=randInt(2, Math.min(3,CONFIG.MAX_GRADO-1));
+  const p=randPoly(grado);
+  const r=randInt(-5,5);
+  const {coefsDesc, bajados, cociente, resto} = ruffini(p, r);
+  const n=coefsDesc.length; // cantidad de columnas
+
+  container.innerHTML = `<p class="consigna">Aplicá la regla de Ruffini para dividir <strong>(${polyToStr(p)})</strong> por
+    <strong>(x ${r>=0?'-':'+'} ${Math.abs(r)})</strong>. Completá fila por fila: primero "bajás" el primer coeficiente,
+    luego multiplicás por r=${r} y sumás con la siguiente columna.</p>`;
+
+  const wrap=document.createElement('div');
+  const tid='a7';
+  let headerRow = '<tr><th></th>' + coefsDesc.map(c=>`<th>${c}</th>`).join('') + '</tr>';
+  let inputRow = '<tr><td class="ruffini-row-label">resultado</td>' +
+     coefsDesc.map((c,i)=> `<td><input type="text" inputmode="numeric" data-col="${i}" id="${tid}-c${i}" aria-label="Resultado columna ${i+1}"></td>`).join('') + '</tr>';
+  wrap.innerHTML = `
+    <table class="ruffini-table" aria-label="Tabla de Ruffini, r = ${r}">
+      ${headerRow}
+      ${inputRow}
+    </table>
+    <div class="actions-row">
+      <label style="font-weight:700;">Cociente: <input type="text" id="${tid}-coc" style="width:170px;" placeholder="Ej: 2x^2 - x"></label>
+      <label style="font-weight:700;">Resto: <input type="text" id="${tid}-res" style="width:80px;" placeholder="0"></label>
+    </div>
+    <div class="actions-row">
+      <button class="btn-primary btn-sm" data-a="check">✅ Comprobar todo</button>
+      <button class="btn-outline btn-sm" data-a="hint">💡 Pista (<span data-hl>2</span>)</button>
+      <button class="btn-outline btn-sm" data-a="sol">📖 Ver solución</button>
+    </div>
+    <div class="feedback" id="${tid}-fb" role="status"></div>
+    <div class="solution-box" id="${tid}-sol">
+      <strong>Tabla completa:</strong>
+      <table class="ruffini-table">
+        <tr><th></th>${coefsDesc.map(c=>`<th>${c}</th>`).join('')}</tr>
+        <tr><td class="ruffini-row-label">r·anterior</td>${bajados.map((v,i)=> i===0?'<td>—</td>':`<td>${r}·${bajados[i-1]}=${r*bajados[i-1]}</td>`).join('')}</tr>
+        <tr><td class="ruffini-row-label">resultado</td>${bajados.map(v=>`<td><strong>${v}</strong></td>`).join('')}</tr>
+      </table>
+      <p>Cociente: <code>${polyToStr(cociente)}</code> — Resto: <code>${resto}</code></p>
+      <p>Verificación: (x ${r>=0?'-':'+'} ${Math.abs(r)})·(${polyToStr(cociente)}) + ${resto} = ${polyToStr(polyAdd(polyMul([-r,1],cociente),[resto]))} ✔️</p>
+    </div>
+  `;
+  container.appendChild(wrap);
+
+  let hintsUsed=0, solved=false, solShown=false;
+  const fb=wrap.querySelector(`#${tid}-fb`), solBox=wrap.querySelector(`#${tid}-sol`), hl=wrap.querySelector('[data-hl]');
+  const cocInput=wrap.querySelector(`#${tid}-coc`), resInput=wrap.querySelector(`#${tid}-res`);
+
+  wrap.querySelector('[data-a="check"]').addEventListener('click', ()=>{
+    let celdasOk=true;
+    for(let i=0;i<n;i++){
+      const inp=wrap.querySelector(`#${tid}-c${i}`);
+      const v=parseFloat((inp.value||'').replace(',','.'));
+      if(isNaN(v) || Math.abs(v-bajados[i])>1e-9){ celdasOk=false; inp.style.borderColor='var(--danger)'; }
+      else inp.style.borderColor='var(--accent)';
+    }
+    const cocParsed=parsePoly(cocInput.value);
+    const cocOk = cocParsed!==null && polyEquals(cocParsed, cociente);
+    const restoParsed=parseFloat((resInput.value||'').replace(',','.'));
+    const restoOk = !isNaN(restoParsed) && Math.abs(restoParsed-resto)<1e-9;
+
+    if(celdasOk && cocOk && restoOk){
+      feedback(fb,'ok','¡Ruffini perfecto! Bajada, multiplicación y suma correctas en cada paso. 🎉');
+      wrap.classList.add('pop'); setTimeout(()=>wrap.classList.remove('pop'),300);
+      solved=true;
+      registerResult('a7',0,{correct:true,hintsUsed,showedSolution:solShown}, puntosSegunPistas(hintsUsed));
+    } else {
+      let msg='Hay algo para revisar: ';
+      if(!celdasOk) msg+='alguna celda de la tabla no coincide. ';
+      if(!cocOk) msg+='revisá el cociente. ';
+      if(!restoOk) msg+='revisá el resto.';
+      feedback(fb,'bad', msg);
+      wrap.classList.add('shake'); setTimeout(()=>wrap.classList.remove('shake'),300);
+      registerResult('a7',0,{correct:false,hintsUsed,showedSolution:solShown}, 0);
+    }
+  });
+  wrap.querySelector('[data-a="hint"]').addEventListener('click', ()=>{
+    if(hintsUsed>=2){ feedback(fb,'hint','Ya usaste tus 2 pistas.'); return; }
+    feedback(fb,'hint', hintsUsed===0
+      ? `El primer valor "se baja" tal cual: ${bajados[0]}.`
+      : `Cada valor siguiente = coeficiente de esa columna + r(${r}) × valor anterior.`);
+    hintsUsed++; hl.textContent=(2-hintsUsed);
+    registerResult('a7',0,{correct:solved,hintsUsed,showedSolution:solShown}, solved?puntosSegunPistas(hintsUsed):0);
+  });
+  wrap.querySelector('[data-a="sol"]').addEventListener('click', ()=>{
+    solBox.classList.toggle('show'); solShown=true;
+    registerResult('a7',0,{correct:solved,hintsUsed,showedSolution:true}, solved?puntosSegunPistas(hintsUsed):0);
+  });
+}
+
+/* === ACTIVIDAD 8: reto final "el cofre" — mezcla de operaciones ===
+   4 mini-preguntas encadenadas (suma, resta, multiplicación, monomio);
+   cada acierto agrega una "pieza" al cofre visual. Al completar las 4,
+   el cofre se abre con una animación. */
+function generarActividad8(container){
+  container.innerHTML = `<p class="consigna">¡Último desafío! Respondé las 4 preguntas para juntar las piezas de la llave y abrir el cofre. 🗝️</p>
+    <div class="piece-list" id="a8-piezas" aria-label="Piezas de la llave">
+      <div class="piece" data-p="0"></div><div class="piece" data-p="1"></div>
+      <div class="piece" data-p="2"></div><div class="piece" data-p="3"></div>
+    </div>`;
+
+  const preguntas=[];
+  // 1) suma
+  { const a=randPoly(2), b=randPoly(1); preguntas.push({texto:`(${polyToStr(a)}) + (${polyToStr(b)})`, r:polyAdd(a,b)}); }
+  // 2) resta
+  { const a=randPoly(2), b=randPoly(2); preguntas.push({texto:`(${polyToStr(a)}) - (${polyToStr(b)})`, r:polySub(a,b)}); }
+  // 3) multiplicación monomio x binomio
+  { const mon=[]; const mg=randInt(0,1); mon[mg]=randNonZero(-5,5); for(let i=0;i<mg;i++) mon[i]=0; const b=randPoly(1);
+    preguntas.push({texto:`(${polyToStr(mon)}) · (${polyToStr(b)})`, r:polyMul(mon,b)}); }
+  // 4) división por monomio
+  { const monCoef=randNonZero(-5,5); const cociente=randPoly(1); const monomio=[monCoef];
+    const dividendo=polyMul(cociente, monomio);
+    preguntas.push({texto:`(${polyToStr(dividendo)}) ÷ ${monCoef}`, r:cociente}); }
+
+  preguntas.forEach((preg, idx)=>{
+    const holder=document.createElement('div');
+    holder.style.marginTop='1rem'; holder.style.paddingTop='1rem';
+    holder.style.borderTop = idx>0 ? '1px dashed var(--border)' : 'none';
+    const fid=`a8-ex${idx}`;
+    holder.innerHTML=`
+      <div class="poly-display">Pregunta ${idx+1}: ${preg.texto} = ?</div>
+      <div class="actions-row">
+        <label for="${fid}-input" class="visually-hidden">Respuesta pregunta ${idx+1}</label>
+        <input type="text" id="${fid}-input" placeholder="Escribí el resultado" style="flex:1;min-width:180px;">
+        <button class="btn-primary btn-sm" data-a="check">✅ Comprobar</button>
+        <button class="btn-outline btn-sm" data-a="hint">💡 Pista (<span data-hl>2</span>)</button>
+        <button class="btn-outline btn-sm" data-a="sol">📖 Ver solución</button>
+      </div>
+      <div class="feedback" id="${fid}-fb" role="status"></div>
+      <div class="solution-box" id="${fid}-sol">Resultado: <code>${polyToStr(preg.r)}</code></div>
+    `;
+    container.appendChild(holder);
+
+    let hintsUsed=0, solved=false, solShown=false;
+    const input=holder.querySelector('input'), fb=holder.querySelector(`#${fid}-fb`), solBox=holder.querySelector(`#${fid}-sol`), hl=holder.querySelector('[data-hl]');
+    function actualizarPieza(){
+      const total = (STATE.results['a8']||[]).filter(x=>x&&x.correct).length;
+      document.querySelectorAll('#a8-piezas .piece').forEach((p,i)=>{ p.classList.toggle('on', i<total); });
+      if(total===4){
+        const cofre=document.getElementById('cofre-visual');
+      }
+    }
+    holder.querySelector('[data-a="check"]').addEventListener('click', ()=>{
+      const res=checkAnswer(input.value, preg.r);
+      if(res.ok){
+        feedback(fb,'ok','¡Correcto! Pieza de la llave conseguida. 🗝️');
+        holder.classList.add('bounce'); setTimeout(()=>holder.classList.remove('bounce'),400);
+        solved=true;
+        registerResult('a8', idx, {correct:true,hintsUsed,showedSolution:solShown}, puntosSegunPistas(hintsUsed));
+        actualizarPieza();
+      } else {
+        feedback(fb,'bad', res.reason==='formato' ? 'No pude leer esa respuesta.' : 'Todavía no. ¡Revisá la operación con calma!');
+        holder.classList.add('shake'); setTimeout(()=>holder.classList.remove('shake'),300);
+        registerResult('a8', idx, {correct:false,hintsUsed,showedSolution:solShown}, 0);
+      }
+    });
+    holder.querySelector('[data-a="hint"]').addEventListener('click', ()=>{
+      if(hintsUsed>=2){ feedback(fb,'hint','Ya usaste tus 2 pistas.'); return; }
+      feedback(fb,'hint', hintsUsed===0? 'Identificá primero qué operación es (suma, resta, multiplicación o división).' : `El grado del resultado es ${polyDegree(preg.r)}.`);
+      hintsUsed++; hl.textContent=(2-hintsUsed);
+      registerResult('a8', idx, {correct:solved,hintsUsed,showedSolution:solShown}, solved?puntosSegunPistas(hintsUsed):0);
+    });
+    holder.querySelector('[data-a="sol"]').addEventListener('click', ()=>{
+      solBox.classList.toggle('show'); solShown=true;
+      registerResult('a8', idx, {correct:solved,hintsUsed,showedSolution:true}, solved?puntosSegunPistas(hintsUsed):0);
+    });
+  });
+}
+
+/* ================================================================
+   5. NAVEGACIÓN ENTRE PANTALLAS Y TEMPORIZADOR
+   ================================================================ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function goToActivity(i){
+  STATE.currentActivity=i;
+  const container=document.getElementById('activity-container');
+  container.innerHTML='';
+  const def=ACTIVIDADES[i];
+  const titulo=document.createElement('div');
+  titulo.className='activity';
+  titulo.innerHTML=`<h2>${def.label}</h2><p class="meta">⏱️ ~${def.minutos} min</p><div id="act-inner"></div>`;
+  container.appendChild(titulo);
+  def.generar(titulo.querySelector('#act-inner'));
+  addFinishButtonIfNeeded();
+  updateStatusRow();
+  showScreen('screen-actividades');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function addFinishButtonIfNeeded(){
+  const container=document.getElementById('activity-container');
+  if(document.getElementById('btn-finalizar')) return;
+  const btn=document.createElement('button');
+  btn.id='btn-finalizar'; btn.className='btn-accent'; btn.style.marginTop='1rem';
+  btn.textContent='🏁 Ver resumen final';
+  btn.addEventListener('click', showFinalScreen);
+  container.appendChild(btn);
+}
+
+let timerSeconds=0, timerInterval=null, alarmaDisparada=false;
+function formatTime(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const ss=(s%60).toString().padStart(2,'0'); return `${m}:${ss}`; }
+function startTimer(){
+  if(timerInterval) return;
+  document.getElementById('timer-meta').textContent = formatTime(CONFIG.TIEMPO_TOTAL_MIN*60);
+  timerInterval=setInterval(()=>{
+    timerSeconds++;
+    document.getElementById('timer-display').textContent=formatTime(timerSeconds);
+    if(timerSeconds >= CONFIG.TIEMPO_TOTAL_MIN*60 && !alarmaDisparada){
+      alarmaDisparada=true;
+      document.getElementById('timer-box').classList.add('alarma');
+    }
+  },1000);
+}
+function resetTimer(){
+  timerSeconds=0; alarmaDisparada=false;
+  document.getElementById('timer-display').textContent=formatTime(0);
+  document.getElementById('timer-box').classList.remove('alarma');
+}
+
+document.getElementById('btn-empezar').addEventListener('click', ()=>{ startTimer(); goToActivity(0); });
+document.getElementById('btn-nueva-version').addEventListener('click', ()=>{
+  STATE.results={}; STATE.score=0; STATE.seed=Date.now();
+  resetTimer(); startTimer(); goToActivity(0);
+});
+document.getElementById('btn-reintentar').addEventListener('click', ()=>{
+  STATE.results={}; STATE.score=0;
+  resetTimer(); startTimer(); goToActivity(0);
+});
+document.getElementById('btn-volver').addEventListener('click', ()=>{
+  clearInterval(timerInterval); timerInterval=null;
+  STATE.results={}; STATE.score=0;
+  resetTimer();
+  showScreen('screen-portada');
+});
+
+/* ================================================================
+   6. GUARDAR / CARGAR PROGRESO (localStorage)
+   ================================================================ */
+const LS_KEY='cofrePolinomiosProgreso';
+document.getElementById('btn-guardar').addEventListener('click', ()=>{
+  const data={ results:STATE.results, score:STATE.score, timerSeconds, currentActivity:STATE.currentActivity };
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    alert('Progreso guardado en este navegador. Podés cerrar y volver a abrir el archivo, y usar "Cargar" para recuperarlo.');
+  }catch(e){ alert('No se pudo guardar el progreso en este navegador.'); }
+});
+document.getElementById('btn-cargar').addEventListener('click', ()=>{
+  const raw=localStorage.getItem(LS_KEY);
+  if(!raw){ alert('No hay progreso guardado en este navegador todavía.'); return; }
+  try{
+    const data=JSON.parse(raw);
+    STATE.results=data.results||{};
+    STATE.score=data.score||0;
+    timerSeconds=data.timerSeconds||0;
+    document.getElementById('timer-display').textContent=formatTime(timerSeconds);
+    startTimer();
+    goToActivity(data.currentActivity||0);
+    alert('Progreso cargado. ¡Continuemos donde lo dejaste!');
+  }catch(e){ alert('El progreso guardado no se pudo leer.'); }
+});
+
+/* ================================================================
+   7. PANEL DOCENTE (modal con clave simple)
+   ================================================================ */
+const backdrop=document.getElementById('modal-backdrop');
+document.getElementById('btn-docente').addEventListener('click', ()=>{
+  document.getElementById('modal-login').hidden=false;
+  document.getElementById('modal-panel').hidden=true;
+  document.getElementById('clave-error').style.display='none';
+  document.getElementById('input-clave').value='';
+  backdrop.classList.add('show');
+  document.getElementById('input-clave').focus();
+});
+document.getElementById('btn-clave-cancel').addEventListener('click', ()=> backdrop.classList.remove('show'));
+document.getElementById('btn-cerrar-modal').addEventListener('click', ()=> backdrop.classList.remove('show'));
+document.getElementById('btn-clave-ok').addEventListener('click', ()=>{
+  const val=document.getElementById('input-clave').value;
+  if(val===CONFIG.CLAVE_DOCENTE){
+    document.getElementById('modal-login').hidden=true;
+    document.getElementById('modal-panel').hidden=false;
+  } else {
+    document.getElementById('clave-error').style.display='block';
+  }
+});
+backdrop.addEventListener('click', (e)=>{ if(e.target===backdrop) backdrop.classList.remove('show'); });
+
+/* ================================================================
+   8. PANTALLA FINAL — PUNTAJE, RESUMEN Y CONSEJO DOCENTE
+   ================================================================ */
+function showFinalScreen(){
+  clearInterval(timerInterval); timerInterval=null;
+  document.getElementById('final-time').textContent=formatTime(timerSeconds);
+
+  let totalItems=0, correctos=0;
+  const summaryList=document.getElementById('final-summary');
+  const recsList=document.getElementById('final-recs');
+  summaryList.innerHTML=''; recsList.innerHTML='';
+  const temasFlojos=[];
+
+  ACTIVIDADES.forEach(a=>{
+    const r=STATE.results[a.id]||[];
+    const attempted=r.filter(Boolean);
+    const ok=attempted.filter(x=>x.correct).length;
+    totalItems+=a.items; correctos+=ok;
+    const li=document.createElement('li');
+    li.textContent=`${a.label}: ${ok} / ${a.items} correctos`;
+    summaryList.appendChild(li);
+    if(ok < a.items*0.75) temasFlojos.push(a.label.replace(/^\d+\.\s*/, ''));
+  });
+
+  const pct=Math.round(100*correctos/totalItems);
+  document.getElementById('final-score').textContent = pct+'% — ⭐ '+STATE.score+' puntos';
+
+  let msg='';
+  if(pct>=90) msg='¡Dominio excelente de las operaciones con polinomios! 🏆';
+  else if(pct>=70) msg='Muy buen trabajo, con algunos detalles para afianzar. 👍';
+  else if(pct>=50) msg='Vas por buen camino; conviene repasar los temas marcados abajo. 💪';
+  else msg='Buen punto de partida: repasemos juntos los temas pendientes. 🙂';
+  document.getElementById('final-msg').textContent=msg;
+
+  if(temasFlojos.length===0){
+    const li=document.createElement('li'); li.textContent='¡Sin temas pendientes! Podés reintentar para sumar más puntaje.';
+    recsList.appendChild(li);
+  } else {
+    temasFlojos.forEach(t=>{ const li=document.createElement('li'); li.textContent=`Repasar: ${t}`; recsList.appendChild(li); });
+  }
+
+  // Consejo pedagógico automático para el docente según desempeño
+  let consejo='Consejo para el docente: ';
+  if(temasFlojos.some(t=>t.includes('Ruffini'))) consejo+='conviene retomar Ruffini con ejercicios guiados en el pizarrón antes de la próxima práctica individual.';
+  else if(temasFlojos.some(t=>t.includes('Multiplicación'))) consejo+='reforzar la propiedad distributiva con ejemplos de multiplicación binomio×trinomio antes de avanzar.';
+  else if(temasFlojos.some(t=>t.includes('monomio'))) consejo+='repasar la resta de exponentes en la división término a término con más ejemplos guiados.';
+  else if(pct>=90) consejo+='el grupo está listo para avanzar a factorización u otros temas relacionados.';
+  else consejo+='revisar en clase los ítems marcados como pendientes antes de seguir avanzando.';
+  document.getElementById('consejo-docente').textContent=consejo;
+
+  document.getElementById('cofre-visual').textContent = pct>=70 ? '🔓' : '🔒';
+  showScreen('screen-final');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+/* Estado inicial */
+resetTimer();
+</script>
+</body>
+</html>
