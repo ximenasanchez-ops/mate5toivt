@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>Jugamos con Figuras</title>
+
+<!--
+============================================================================
+  ARCHIVO: index.html — "Jugamos con Figuras"
+  Archivo creado para: practicar el reconocimiento de 4 paralelogramos
+  (paralelogramo, rectángulo, rombo, cuadrado) y 3 trapecios (isósceles,
+  rectángulo, escaleno), y el reconocimiento de sus lados paralelos.
+  Pensado para alumnado de educación inclusiva, con lenguaje muy simple.
+
+  INSTRUCCIONES PARA EL PROFESOR/A
+  ---------------------------------------------------------------------------
+  - Cómo abrir: hacer doble clic en este archivo, se abre en cualquier
+    navegador (Chrome, Firefox, Safari). No necesita internet ni instalar
+    nada. Funciona igual en celular, tablet y computadora.
+  - Cómo usar: el alumno toca "Empezar" y va pasando tarjetas de a una.
+    Cada tarjeta es una actividad corta. Hay un botón "🔊 Escuchar" que lee
+    la consigna en voz alta, y las consignas también se leen solas al
+    entrar a cada tarjeta (se puede apagar con el botón 🔈/🔇 arriba).
+  - Botones de arriba: A- / A+ cambian el tamaño de letra; "Alto contraste"
+    cambia a colores más fuertes; 🔈 apaga o prende la voz.
+  - Guardar progreso: el botón "💾 Guardar" recuerda en qué tarjeta se
+    quedó el alumno (en este mismo navegador). "📂 Continuar" lo retoma.
+  - TODO lo que se puede editar fácilmente (textos, pistas, tiempo
+    estimado, tamaño de letra inicial) está junto al principio del bloque
+    de JavaScript, en el objeto llamado CONFIG. Buscá "=== CONFIG ===".
+  - No hay ejercicios de área ni de perímetro ni cuentas: solo reconocer
+    figuras y sus lados paralelos.
+============================================================================
+-->
+
+<style>
+/* ============================================================
+   1. VARIABLES DE DISEÑO
+   Tipografía grande, botones grandes, alto contraste opcional.
+   ============================================================ */
+:root{
+  --fs-base:20px;         /* tamaño de letra base, ajustable con A-/A+ */
+  --bg:#eef6ff;
+  --panel:#ffffff;
+  --primary:#1d5fd6;
+  --primary-dark:#123f96;
+  --accent:#1fa15a;
+  --accent-dark:#0f7c40;
+  --warn:#b8720a;
+  --danger:#c0392b;
+  --text:#132038;
+  --muted:#4b5670;
+  --border:#c3d3ec;
+  --radius:18px;
+  --shadow:0 4px 16px rgba(20,40,90,.12);
+}
+/* Modo alto contraste: se activa agregando la clase "alto-contraste" al body */
+body.alto-contraste{
+  --bg:#000000;
+  --panel:#000000;
+  --primary:#ffdd00;
+  --primary-dark:#c9ab00;
+  --accent:#00ff6a;
+  --accent-dark:#00c454;
+  --warn:#ffb300;
+  --danger:#ff5252;
+  --text:#ffffff;
+  --muted:#ffffff;
+  --border:#ffffff;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Verdana","Segoe UI",Arial,sans-serif;
+  font-size:var(--fs-base);
+  line-height:1.5;
+  padding-bottom:50px;
+}
+h1,h2,h3{line-height:1.3;margin-top:0;}
+button{
+  font-family:inherit; font-size:1em; cursor:pointer; border:none; border-radius:12px;
+  min-height:48px; min-width:48px; padding:.7em 1em;
+  transition:transform .08s ease, background .15s ease;
+}
+button:active{transform:scale(.95);}
+button:focus-visible, [tabindex]:focus-visible{
+  outline:4px solid var(--warn); outline-offset:2px;
+}
+.btn-primary{background:var(--primary);color:#fff;font-weight:700;}
+.btn-primary:hover{background:var(--primary-dark);}
+.btn-accent{background:var(--accent);color:#fff;font-weight:700;}
+.btn-accent:hover{background:var(--accent-dark);}
+.btn-outline{background:var(--panel);color:var(--primary);border:3px solid var(--primary);}
+.btn-outline:hover{background:#eaf1ff;}
+body.alto-contraste .btn-outline{background:#000;color:var(--primary);}
+.btn-grande{font-size:1.15em;padding:.85em 1.4em;}
+
+/* ============================================================
+   2. CABECERA
+   ============================================================ */
+header#top-bar{
+  position:sticky;top:0;z-index:60;
+  background:var(--primary);
+  padding:.6rem .8rem;
+  display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between;
+  box-shadow:var(--shadow);
+}
+header#top-bar h1{font-size:1.15rem;color:#fff;margin:0;}
+#header-controls{display:flex;flex-wrap:wrap;gap:.4rem;}
+#header-controls button{
+  background:rgba(255,255,255,.18);color:#fff;font-size:.85em;padding:.5em .7em;min-height:40px;
+}
+body.alto-contraste header#top-bar{background:#000;border-bottom:3px solid #ffdd00;}
+body.alto-contraste #header-controls button{background:#000;border:2px solid #ffdd00;color:#ffdd00;}
+
+main{max-width:820px;margin:1.1rem auto;padding:0 .8rem;display:flex;flex-direction:column;gap:1.1rem;}
+.card{background:var(--panel);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.3rem;border:2px solid var(--border);}
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* progreso */
+#status-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.6rem;margin-bottom:.8rem;}
+.progress-track{flex:1;min-width:150px;height:16px;background:var(--border);border-radius:10px;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:var(--accent);transition:width .35s ease;}
+#tarjeta-num{font-weight:700;color:var(--primary-dark);white-space:nowrap;}
+body.alto-contraste #tarjeta-num{color:var(--primary);}
+
+/* ============================================================
+   3. TARJETA DE ACTIVIDAD
+   ============================================================ */
+.actividad h2{font-size:1.2rem;color:var(--primary-dark);}
+body.alto-contraste .actividad h2{color:var(--primary);}
+.consigna{font-size:1.05em;margin:.6rem 0;font-weight:600;}
+.figura-svg{width:100%;max-width:320px;height:auto;display:block;margin:0 auto;background:#f4f8ff;border-radius:14px;border:2px solid var(--border);}
+body.alto-contraste .figura-svg{background:#111;}
+
+.actions-row{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem;justify-content:center;}
+.feedback{margin-top:.8rem;padding:.8rem 1rem;border-radius:12px;font-weight:700;text-align:center;display:none;font-size:1.05em;}
+.feedback.ok{display:block;background:#e0f7e9;color:var(--accent-dark);border:3px solid var(--accent);}
+.feedback.bad{display:block;background:#fdeceb;color:var(--danger);border:3px solid var(--danger);}
+.feedback.hint{display:block;background:#fff4e0;color:var(--warn);border:3px solid var(--warn);}
+body.alto-contraste .feedback.ok{background:#001a0a;}
+body.alto-contraste .feedback.bad{background:#1a0000;}
+body.alto-contraste .feedback.hint{background:#1a1200;}
+
+@keyframes pop{0%{transform:scale(1);}45%{transform:scale(1.08);}100%{transform:scale(1);}}
+.pop{animation:pop .3s ease;}
+@keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
+.shake{animation:shake .3s ease;}
+
+/* -------- opciones grandes (completar / elegir imagen) -------- */
+.opciones{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin:.8rem 0;}
+.opcion-btn{
+  background:var(--panel);border:3px solid var(--primary);color:var(--primary-dark);
+  border-radius:14px;padding:.8em 1.1em;font-weight:700;font-size:1.05em;min-width:110px;
+}
+.opcion-btn:hover{background:#eaf1ff;}
+.opcion-btn.correcta{background:var(--accent);border-color:var(--accent-dark);color:#fff;}
+.opcion-btn.incorrecta{background:#fdeceb;border-color:var(--danger);color:var(--danger);}
+body.alto-contraste .opcion-btn{background:#000;color:var(--primary);}
+body.alto-contraste .opcion-btn.correcta{background:#003d17;color:#fff;}
+
+.opciones-imagen{display:flex;flex-wrap:wrap;gap:1rem;justify-content:center;}
+.opcion-imagen{
+  background:var(--panel);border:3px solid var(--border);border-radius:14px;padding:.6rem;
+  cursor:pointer;width:150px;
+}
+.opcion-imagen:hover{border-color:var(--primary);}
+.opcion-imagen.correcta{border-color:var(--accent);background:#e0f7e9;}
+.opcion-imagen.incorrecta{border-color:var(--danger);background:#fdeceb;}
+.opcion-imagen svg{width:100%;height:auto;}
+.opcion-imagen p{text-align:center;margin:.3rem 0 0;font-weight:700;}
+
+/* -------- arrastrar etiqueta a la figura -------- */
+.etiquetas-pool{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin:.8rem 0;}
+.etiqueta{
+  touch-action:none; user-select:none;
+  background:var(--primary);color:#fff;font-weight:700;padding:.75em 1.1em;border-radius:16px;
+  cursor:grab; box-shadow:0 4px 0 var(--primary-dark); font-size:1.05em;
+}
+.etiqueta:active{cursor:grabbing;}
+.etiqueta.dragging{position:fixed;z-index:200;opacity:.92;pointer-events:none;}
+.etiqueta.colocada{opacity:.3;cursor:default;box-shadow:none;}
+.zona-figura{position:relative;display:flex;justify-content:center;margin:.6rem 0;}
+.zona-suelta{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:150px;height:64px;border:4px dashed var(--border);border-radius:16px;
+  display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--muted);
+  background:rgba(255,255,255,.75);
+}
+.zona-suelta.sobre{border-color:var(--accent);background:#e0f7e9;}
+.zona-suelta.llena{border-style:solid;border-color:var(--accent);color:var(--accent-dark);background:#e0f7e9;}
+
+/* -------- clasificar en cajas -------- */
+.cajas-wrap{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:1rem;}
+.caja{
+  flex:1;min-width:150px;min-height:150px;border:4px dashed var(--border);border-radius:16px;
+  background:#f4f8ff;padding:.6rem;text-align:center;
+}
+body.alto-contraste .caja{background:#111;}
+.caja h3{margin:.2rem 0 .5rem;color:var(--primary-dark);}
+body.alto-contraste .caja h3{color:var(--primary);}
+.caja.sobre{border-color:var(--accent);background:#e0f7e9;}
+.figuras-pool{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center;margin:.8rem 0;}
+.figura-chip{
+  touch-action:none;user-select:none;cursor:grab;
+  background:var(--panel);border:3px solid var(--border);border-radius:14px;padding:.4rem;width:90px;
+}
+.figura-chip.dragging{position:fixed;z-index:200;opacity:.92;pointer-events:none;}
+.figura-chip.colocada{opacity:.3;cursor:default;}
+.figura-chip svg{width:100%;height:auto;}
+
+/* -------- unir con líneas (click-click) -------- */
+.match-wrap{display:flex;gap:1.4rem;justify-content:space-between;flex-wrap:wrap;}
+.match-col{flex:1;min-width:130px;display:flex;flex-direction:column;gap:.6rem;}
+.match-item{
+  background:var(--panel);border:3px solid var(--border);border-radius:14px;padding:.7em .8em;
+  text-align:center;font-weight:700;cursor:pointer;font-size:.98em;
+}
+.match-item[aria-pressed="true"]{border-color:var(--primary);background:#eaf1ff;}
+.match-item.ok{border-color:var(--accent);background:#e0f7e9;opacity:.7;cursor:default;}
+.match-item.bad{border-color:var(--danger);}
+.match-item svg{width:80px;height:auto;}
+
+/* -------- resaltar lados paralelos -------- */
+.lado-clickable{cursor:pointer;}
+.lado-seleccionado{stroke:var(--warn) !important; stroke-width:7 !important;}
+.lado-correcto{stroke:var(--accent) !important; stroke-width:7 !important;}
+
+/* ============================================================
+   4. PANTALLA FINAL
+   ============================================================ */
+#final-carita{font-size:3.5rem;text-align:center;}
+#final-msg{text-align:center;font-size:1.2em;font-weight:700;}
+
+/* ============================================================
+   5. RESPONSIVE
+   ============================================================ */
+@media (max-width:480px){
+  .zona-suelta{width:120px;height:56px;font-size:.9em;}
+  .match-wrap{gap:.8rem;}
+}
+footer{max-width:820px;margin:1rem auto;padding:0 .8rem 2rem;color:var(--muted);font-size:.85rem;text-align:center;}
+
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     CABECERA
+     ============================================================ -->
+<header id="top-bar">
+  <h1>🔷 Jugamos con Figuras</h1>
+  <div id="header-controls">
+    <button id="btn-voz" aria-pressed="true" title="Prender o apagar la voz">🔊 Voz</button>
+    <button id="btn-menos" title="Letra más chica">A−</button>
+    <button id="btn-mas" title="Letra más grande">A+</button>
+    <button id="btn-contraste" aria-pressed="false" title="Alto contraste">◐ Contraste</button>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================================================
+     PANTALLA 1: PORTADA
+     ============================================================ -->
+<section id="screen-inicio" class="screen active card" aria-labelledby="h-inicio">
+  <h2 id="h-inicio">Hola Valentina y Maxi👋</h2>
+  <p class="consigna">Vamos a jugar con figuras.</p>
+  <p>Lee y escucha cada instrucción. Toca o arrastra para responder. Si te trabás, podés pedir una pista.</p>
+  <p>Vamos a ver 4 figuras con 2 pares de lados que van derechito, iguales (paralelogramo, rectángulo, rombo, cuadrado) y 3 figuras con 1 par de lados así (trapecio isósceles, trapecio rectángulo, trapecio escaleno).</p>
+  <div class="actions-row">
+    <button class="btn-primary btn-grande" id="btn-empezar">▶️ Empezar</button>
+    <button class="btn-outline" id="btn-continuar-inicio">📂 Continuar donde quedé</button>
+  </div>
+</section>
+
+<!-- ============================================================
+     PANTALLA 2: ACTIVIDADES (una tarjeta a la vez)
+     ============================================================ -->
+<section id="screen-actividad" class="screen" aria-labelledby="h-act">
+  <div class="card">
+    <h2 id="h-act" class="visually-hidden">Actividad</h2>
+    <div id="status-row">
+      <span id="tarjeta-num">Tarjeta 1 de 12</span>
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+    </div>
+    <div id="actividad-container" class="actividad"><!-- se llena por JS --></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PANTALLA 3: FINAL
+     ============================================================ -->
+<section id="screen-final" class="screen card" aria-labelledby="h-final">
+  <div id="final-carita">🌟</div>
+  <h2 id="h-final" style="text-align:center;">¡Terminaste!</h2>
+  <p id="final-msg"></p>
+  <p style="text-align:center;">Tiempo: <strong id="final-tiempo">00:00</strong></p>
+  <div class="actions-row">
+    <button class="btn-primary btn-grande" id="btn-otra-vez">🔁 Jugar de nuevo</button>
+    <button class="btn-outline" id="btn-volver-inicio">🏠 Inicio</button>
+  </div>
+</section>
+
+</main>
+
+<footer>
+ 
+  <button class="btn-outline" id="btn-guardar" style="margin:.3rem;">💾 Guardar</button>
+</footer>
+  <h3>INSTITUTO VISIÓN TECNOLÓGICA - Matemática 5to</h3>
+
+<script>
+/* ================================================================================
+   JUGAMOS CON FIGURAS — LÓGICA
+   Secciones:
+     0. CONFIG              → todo lo que el docente puede ajustar fácil
+     1. GEOMETRÍA DE FIGURAS → puntos de cada una de las 7 figuras + lados paralelos
+     2. DIBUJO SVG            → función que dibuja una figura
+     3. VOZ (texto a voz)
+     4. UTILIDADES DE ARRASTRE (pointer events, mouse + táctil)
+     5. LAS 12 TARJETAS DE ACTIVIDAD
+     6. NAVEGACIÓN, PROGRESO, TEMPORIZADOR
+     7. GUARDAR / CONTINUAR (localStorage)
+   ================================================================================ */
+
+/* ---------------------------------------------------------------
+   0. CONFIG — el profesor puede cambiar esto
+   --------------------------------------------------------------- */
+const CONFIG = {
+  TIEMPO_ESTIMADO_MIN: 30,      // solo informativo, no genera alarma ni presión
+  FUENTE_INICIAL_PX: 20,        // tamaño de letra inicial
+  VOZ_ACTIVADA_INICIO: true,    // si la voz arranca prendida o apagada
+  IDIOMA_VOZ: 'es-ES',          // también podés probar 'es-AR', 'es-MX', etc.
+  TEXTO_PISTA_GENERAL_1: 'Mirá bien los lados de la figura.',
+  TEXTO_PISTA_GENERAL_2: 'Tocá otra vez, con calma. ¡Vos podés!',
+};
+
+/* ---------------------------------------------------------------
+   1. GEOMETRÍA DE LAS 7 FIGURAS
+   Cada figura tiene 4 puntos (vértices) en un cuadro de 220x160.
+   Los "lados" son: lado0 = punto0-punto1, lado1 = punto1-punto2,
+   lado2 = punto2-punto3, lado3 = punto3-punto0.
+   "paresParalelos" indica qué lados van en la misma dirección.
+   --------------------------------------------------------------- */
+const FIGURAS = {
+  paralelogramo: {
+    nombre: 'paralelogramo',
+    grupo: 'Paralelogramo',
+    puntos: [[30,130],[150,130],[190,40],[70,40]],
+    paresParalelos: [[0,2],[1,3]],
+  },
+  rectangulo: {
+    nombre: 'rectángulo',
+    grupo: 'Paralelogramo',
+    puntos: [[40,120],[180,120],[180,40],[40,40]],
+    paresParalelos: [[0,2],[1,3]],
+  },
+  rombo: {
+    nombre: 'rombo',
+    grupo: 'Paralelogramo',
+    puntos: [[110,20],[190,80],[110,150],[30,80]],
+    paresParalelos: [[0,2],[1,3]],
+  },
+  cuadrado: {
+    nombre: 'cuadrado',
+    grupo: 'Paralelogramo',
+    puntos: [[50,20],[170,20],[170,140],[50,140]],
+    paresParalelos: [[0,2],[1,3]],
+  },
+  trapecioIsosceles: {
+    nombre: 'trapecio isósceles',
+    grupo: 'Trapecio',
+    puntos: [[50,130],[170,130],[150,40],[70,40]],
+    paresParalelos: [[0,2]],
+  },
+  trapecioRectangulo: {
+    nombre: 'trapecio rectángulo',
+    grupo: 'Trapecio',
+    puntos: [[40,130],[160,130],[160,40],[70,40]],
+    paresParalelos: [[0,2]],
+  },
+  trapecioEscaleno: {
+    nombre: 'trapecio escaleno',
+    grupo: 'Trapecio',
+    puntos: [[30,130],[180,130],[160,45],[80,45]],
+    paresParalelos: [[0,2]],
+  },
+};
+const LISTA_FIGURAS = Object.keys(FIGURAS);
+
+/* ---------------------------------------------------------------
+   2. DIBUJO SVG DE UNA FIGURA
+   --------------------------------------------------------------- */
+function puntosAStr(puntos){ return puntos.map(p=>p.join(',')).join(' '); }
+
+// Dibuja el polígono. `opciones.ladosClickables` = true habilita marcar lados.
+// `opciones.resaltarPares` = true pinta directamente los pares paralelos (para mostrar solución).
+function dibujarFiguraSVG(idFigura, opciones={}){
+  const fig = FIGURAS[idFigura];
+  const p = fig.puntos;
+  let lados = '';
+  for(let i=0;i<4;i++){
+    const a=p[i], b=p[(i+1)%4];
+    const claseExtra = opciones.ladosClickables ? 'lado-clickable' : '';
+    let colorExtra = '';
+    if(opciones.resaltarPares){
+      // color distinto por cada par paralelo
+      const parIdx = fig.paresParalelos.findIndex(par=>par.includes(i));
+      if(parIdx===0) colorExtra='stroke="#1fa15a" stroke-width="7"';
+      if(parIdx===1) colorExtra='stroke="#d6551d" stroke-width="7"';
+    }
+    lados += `<line data-lado="${i}" class="${claseExtra}" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#132038" stroke-width="5" stroke-linecap="round" ${colorExtra}></line>`;
+  }
+  const idSvg = 'svg-'+Math.random().toString(36).slice(2,9);
+  return `<svg id="${idSvg}" class="figura-svg" viewBox="0 0 220 160" role="img" aria-label="Figura: ${fig.nombre}">
+    <polygon points="${puntosAStr(p)}" fill="#cfe3ff" fill-opacity="0.5" stroke="none"></polygon>
+    ${lados}
+  </svg>`;
+}
+
+/* ---------------------------------------------------------------
+   3. VOZ (texto a voz), muy simple
+   --------------------------------------------------------------- */
+let vozActivada = CONFIG.VOZ_ACTIVADA_INICIO;
+function hablar(texto){
+  if(!vozActivada) return;
+  try{
+    if(!('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = CONFIG.IDIOMA_VOZ;
+    u.rate = 0.95;
+    window.speechSynthesis.speak(u);
+  }catch(e){ /* si el navegador no soporta voz, seguimos sin voz */ }
+}
+
+/* ---------------------------------------------------------------
+   4. UTILIDADES DE ARRASTRE (pointer events: funciona con mouse y dedo)
+   `onDrop(elementoArrastrado, elementoDestino)` se llama al soltar
+   encima de un destino válido (con clase "dnd-destino").
+   --------------------------------------------------------------- */
+function habilitarArrastre(origenSelector, destinoSelector, onDrop, contenedor){
+  contenedor.querySelectorAll(origenSelector).forEach(el=>{
+    el.addEventListener('pointerdown', (e)=>{
+      if(el.dataset.colocado==='1') return;
+      const rect = el.getBoundingClientRect();
+      const offsetX = e.clientX-rect.left, offsetY = e.clientY-rect.top;
+      const anchoOriginal = rect.width;
+      el.setPointerCapture(e.pointerId);
+      el.classList.add('dragging');
+      el.style.width = anchoOriginal+'px';
+      el.style.left = rect.left+'px'; el.style.top = rect.top+'px';
+
+      function mover(ev){
+        el.style.left=(ev.clientX-offsetX)+'px';
+        el.style.top=(ev.clientY-offsetY)+'px';
+        contenedor.querySelectorAll(destinoSelector).forEach(d=>d.classList.remove('sobre'));
+        const bajo = document.elementFromPoint(ev.clientX, ev.clientY);
+        const destino = bajo && bajo.closest ? bajo.closest(destinoSelector) : null;
+        if(destino) destino.classList.add('sobre');
+      }
+      function soltar(ev){
+        document.removeEventListener('pointermove', mover);
+        document.removeEventListener('pointerup', soltar);
+        el.classList.remove('dragging');
+        el.style.position=''; el.style.left=''; el.style.top=''; el.style.width='';
+        contenedor.querySelectorAll(destinoSelector).forEach(d=>d.classList.remove('sobre'));
+        const bajo = document.elementFromPoint(ev.clientX, ev.clientY);
+        const destino = bajo && bajo.closest ? bajo.closest(destinoSelector) : null;
+        if(destino) onDrop(el, destino);
+      }
+      document.addEventListener('pointermove', mover);
+      document.addEventListener('pointerup', soltar);
+    });
+    // Alternativa por teclado: Enter selecciona, y luego Enter en el destino coloca.
+    el.tabIndex = 0;
+    el.setAttribute('role','button');
+    el.addEventListener('keydown', (e)=>{
+      if(e.key!=='Enter' && e.key!==' ') return;
+      e.preventDefault();
+      if(el.dataset.colocado==='1') return;
+      const destinos=[...contenedor.querySelectorAll(destinoSelector)].filter(d=>d.dataset.lleno!=='1');
+      if(destinos.length) onDrop(el, destinos[0]);
+    });
+  });
+}
+
+/* ---------------------------------------------------------------
+   5. ESTADO GLOBAL Y AYUDANTES DE TARJETA
+   --------------------------------------------------------------- */
+const ESTADO = { tarjetaActual:0, completadas:{} };
+
+function marcarCompletada(idTarjeta){
+  ESTADO.completadas[idTarjeta]=true;
+  actualizarProgreso();
+}
+function mostrarFeedback(el, tipo, texto){
+  el.className='feedback '+tipo;
+  el.textContent=texto;
+  hablar(texto);
+}
+
+/* ================================================================
+   5. LAS 12 TARJETAS
+   Cada función recibe el contenedor y arma su propia actividad.
+   idTarjeta identifica la tarjeta para el progreso guardado.
+   ================================================================ */
+
+// --- Tarjetas 1 a 4: arrastrar el nombre sobre cada PARALELOGRAMO ---
+function tarjetaArrastrarNombre(idTarjeta, idFigura, opcionesNombres){
+  return function(container){
+    const fig = FIGURAS[idFigura];
+    const consigna = `Arrastra el nombre a la figura.`;
+    container.innerHTML = `
+      <h2>Actividad: ¿Cómo se llama?</h2>
+      <p class="consigna">${consigna}</p>
+      <div class="zona-figura">
+        ${dibujarFiguraSVG(idFigura)}
+        <div class="zona-suelta" data-lleno="0" aria-label="Zona para soltar el nombre">Soltá acá</div>
+      </div>
+      <div class="etiquetas-pool" id="pool-${idTarjeta}"></div>
+      <div class="actions-row">
+        <button class="btn-outline" data-a="escuchar">🔊 Escuchar</button>
+        <button class="btn-outline" data-a="pista">💡 Pista (<span data-hl>2</span>)</button>
+      </div>
+      <div class="feedback" id="fb-${idTarjeta}" role="status" aria-live="polite"></div>
+    `;
+    const pool = container.querySelector(`#pool-${idTarjeta}`);
+    const nombresBarajados = opcionesNombres.slice().sort(()=>Math.random()-0.5);
+    nombresBarajados.forEach(n=>{
+      const chip=document.createElement('div');
+      chip.className='etiqueta'; chip.textContent=n; chip.dataset.nombre=n; chip.dataset.colocado='0';
+      chip.setAttribute('aria-label', `Nombre: ${n}`);
+      pool.appendChild(chip);
+    });
+    const fb = container.querySelector(`#fb-${idTarjeta}`);
+    let pistasUsadas=0;
+    hablar(consigna+' '+fig.nombre.charAt(0).toUpperCase());
+
+    habilitarArrastre('.etiqueta', '.zona-suelta', (chip, zona)=>{
+      if(zona.dataset.lleno==='1') return;
+      if(chip.dataset.nombre === fig.nombre){
+        zona.textContent = fig.nombre;
+        zona.classList.add('llena'); zona.dataset.lleno='1';
+        chip.dataset.colocado='1'; chip.classList.add('colocada');
+        mostrarFeedback(fb,'ok','¡Muy bien! Es un '+fig.nombre+'.');
+        container.classList.add('pop'); setTimeout(()=>container.classList.remove('pop'),300);
+        marcarCompletada(idTarjeta);
+        habilitarBotonSiguiente(container);
+      } else {
+        mostrarFeedback(fb,'bad','Casi. Ese no es el nombre correcto. Probá otra vez.');
+        container.classList.add('shake'); setTimeout(()=>container.classList.remove('shake'),300);
+      }
+    }, container);
+
+    container.querySelector('[data-a="escuchar"]').addEventListener('click', ()=> hablar(consigna));
+    container.querySelector('[data-a="pista"]').addEventListener('click', ()=>{
+      if(pistasUsadas>=2){ mostrarFeedback(fb,'hint','Ya usaste las 2 pistas.'); return; }
+      const texto = pistasUsadas===0
+        ? (fig.grupo==='Paralelogramo' ? 'Esta figura tiene 2 pares de lados que van igual.' : 'Esta figura tiene 1 par de lados que van igual.')
+        : `El nombre empieza con "${fig.nombre.charAt(0).toUpperCase()}".`;
+      mostrarFeedback(fb,'hint', texto);
+      pistasUsadas++; container.querySelector('[data-hl]').textContent=(2-pistasUsadas);
+    });
+  };
+}
+
+// --- Tarjeta: elegir imagen (¿cuál tiene 2 pares de lados paralelos?) ---
+function tarjetaElegirImagen(idTarjeta){
+  return function(container){
+    const consigna = '¿Cuál de estas figuras tiene dos pares de lados que van igual (paralelos)?';
+    // 1 paralelogramo (correcto) + 2 trapecios (incorrectos), orden al azar
+    const paralelogramos = LISTA_FIGURAS.filter(k=>FIGURAS[k].grupo==='Paralelogramo');
+    const trapecios = LISTA_FIGURAS.filter(k=>FIGURAS[k].grupo==='Trapecio');
+    const correctaId = paralelogramos[Math.floor(Math.random()*paralelogramos.length)];
+    const incorrectas = trapecios.slice().sort(()=>Math.random()-0.5).slice(0,2);
+    const opciones = [correctaId, ...incorrectas].sort(()=>Math.random()-0.5);
+
+    container.innerHTML = `
+      <h2>Actividad: Mirar y elegir</h2>
+      <p class="consigna">${consigna}</p>
+      <div class="opciones-imagen" id="opts-${idTarjeta}"></div>
+      <div class="actions-row">
+        <button class="btn-outline" data-a="escuchar">🔊 Escuchar</button>
+        <button class="btn-outline" data-a="pista">💡 Pista (<span data-hl>2</span>)</button>
+      </div>
+      <div class="feedback" id="fb-${idTarjeta}" role="status" aria-live="polite"></div>
+    `;
+    const opts = container.querySelector(`#opts-${idTarjeta}`);
+    opciones.forEach(idF=>{
+      const div=document.createElement('div');
+      div.className='opcion-imagen'; div.tabIndex=0; div.setAttribute('role','button');
+      div.innerHTML = dibujarFiguraSVG(idF) + `<p>${FIGURAS[idF].nombre}</p>`;
+      div.setAttribute('aria-label', `Elegir ${FIGURAS[idF].nombre}`);
+      opts.appendChild(div);
+    });
+    const fb = container.querySelector(`#fb-${idTarjeta}`);
+    let pistasUsadas=0, resuelto=false;
+    hablar(consigna);
+
+    function elegir(idF, el){
+      if(resuelto) return;
+      if(idF===correctaId){
+        el.classList.add('correcta');
+        mostrarFeedback(fb,'ok','¡Perfecto! Esa figura tiene dos pares de lados paralelos.');
+        resuelto=true;
+        marcarCompletada(idTarjeta);
+        habilitarBotonSiguiente(container);
+      } else {
+        el.classList.add('incorrecta');
+        mostrarFeedback(fb,'bad','Esa no es. Mirá otra vez los lados.');
+        setTimeout(()=>el.classList.remove('incorrecta'), 700);
+      }
+    }
+    [...opts.children].forEach((el,i)=>{
+      const idF = opciones[i];
+      el.addEventListener('click', ()=>elegir(idF, el));
+      el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); elegir(idF, el);} });
+    });
+    container.querySelector('[data-a="escuchar"]').addEventListener('click', ()=> hablar(consigna));
+    container.querySelector('[data-a="pista"]').addEventListener('click', ()=>{
+      if(pistasUsadas>=2){ mostrarFeedback(fb,'hint','Ya usaste las 2 pistas.'); return; }
+      const texto = pistasUsadas===0 ? 'Buscá la figura que NO es un trapecio.' : `Se llama ${FIGURAS[correctaId].nombre}.`;
+      mostrarFeedback(fb,'hint', texto);
+      pistasUsadas++; container.querySelector('[data-hl]').textContent=(2-pistasUsadas);
+    });
+  };
+}
+
+// --- Tarjeta: clasificar arrastrando a 2 cajas ---
+function tarjetaClasificar(idTarjeta){
+  return function(container){
+    const consigna = 'Arrastra cada figura a su caja: Paralelogramo o Trapecio.';
+    const elegidas = [
+      LISTA_FIGURAS.filter(k=>FIGURAS[k].grupo==='Paralelogramo')[Math.floor(Math.random()*4)],
+      LISTA_FIGURAS.filter(k=>FIGURAS[k].grupo==='Paralelogramo')[Math.floor(Math.random()*4)],
+      LISTA_FIGURAS.filter(k=>FIGURAS[k].grupo==='Trapecio')[Math.floor(Math.random()*3)],
+      LISTA_FIGURAS.filter(k=>FIGURAS[k].grupo==='Trapecio')[Math.floor(Math.random()*3)],
+    ];
+    container.innerHTML = `
+      <h2>Actividad: Clasificar</h2>
+      <p class="consigna">${consigna}</p>
+      <div class="figuras-pool" id="pool-${idTarjeta}"></div>
+      <div class="cajas-wrap">
+        <div class="caja dnd-destino" data-grupo="Paralelogramo" data-lleno="0" aria-label="Caja Paralelogramo"><h3>Paralelogramo</h3></div>
+        <div class="caja dnd-destino" data-grupo="Trapecio" data-lleno="0" aria-label="Caja Trapecio"><h3>Trapecio</h3></div>
+      </div>
+      <div class="actions-row">
+        <button class="btn-outline" data-a="escuchar">🔊 Escuchar</button>
+        <button class="btn-outline" data-a="pista">💡 Pista (<span data-hl>2</span>)</button>
+      </div>
+      <div class="feedback" id="fb-${idTarjeta}" role="status" aria-live="polite"></div>
+    `;
+    const pool = container.querySelector(`#pool-${idTarjeta}`);
+    elegidas.forEach((idF,i)=>{
+      const chip=document.createElement('div');
+      chip.className='figura-chip'; chip.dataset.figura=idF; chip.dataset.colocado='0'; chip.dataset.id=i;
+      chip.innerHTML = dibujarFiguraSVG(idF);
+      chip.setAttribute('aria-label', FIGURAS[idF].nombre);
+      pool.appendChild(chip);
+    });
+    const fb = container.querySelector(`#fb-${idTarjeta}`);
+    let pistasUsadas=0, correctos=0;
+    hablar(consigna);
+
+    // Las cajas no usan la clase .zona-suelta sino .dnd-destino (ya definida arriba)
+    container.querySelectorAll('.figura-chip').forEach(el=>{
+      el.addEventListener('pointerdown', (e)=>{
+        if(el.dataset.colocado==='1') return;
+        const rect=el.getBoundingClientRect();
+        const offsetX=e.clientX-rect.left, offsetY=e.clientY-rect.top;
+        el.setPointerCapture(e.pointerId);
+        el.classList.add('dragging'); el.style.width=rect.width+'px';
+        el.style.left=rect.left+'px'; el.style.top=rect.top+'px';
+        function mover(ev){
+          el.style.left=(ev.clientX-offsetX)+'px'; el.style.top=(ev.clientY-offsetY)+'px';
+          container.querySelectorAll('.caja').forEach(c=>c.classList.remove('sobre'));
+          const bajo=document.elementFromPoint(ev.clientX,ev.clientY);
+          const caja=bajo&&bajo.closest?bajo.closest('.caja'):null;
+          if(caja) caja.classList.add('sobre');
+        }
+        function soltar(ev){
+          document.removeEventListener('pointermove',mover);
+          document.removeEventListener('pointerup',soltar);
+          el.classList.remove('dragging'); el.style.position=''; el.style.left=''; el.style.top=''; el.style.width='';
+          container.querySelectorAll('.caja').forEach(c=>c.classList.remove('sobre'));
+          const bajo=document.elementFromPoint(ev.clientX,ev.clientY);
+          const caja=bajo&&bajo.closest?bajo.closest('.caja'):null;
+          if(caja){
+            const idF=el.dataset.figura;
+            if(FIGURAS[idF].grupo === caja.dataset.grupo){
+              caja.appendChild(el); el.dataset.colocado='1'; el.classList.add('colocada');
+              correctos++;
+              mostrarFeedback(fb,'ok', `¡Muy bien! (${correctos}/${elegidas.length})`);
+              if(correctos===elegidas.length){ marcarCompletada(idTarjeta); habilitarBotonSiguiente(container); }
+            } else {
+              mostrarFeedback(fb,'bad','Esa caja no es. Mirá cuántos pares de lados iguales tiene.');
+            }
+          }
+        }
+        document.addEventListener('pointermove',mover);
+        document.addEventListener('pointerup',soltar);
+      });
+      el.tabIndex=0; el.setAttribute('role','button');
+    });
+
+    container.querySelector('[data-a="escuchar"]').addEventListener('click', ()=> hablar(consigna));
+    container.querySelector('[data-a="pista"]').addEventListener('click', ()=>{
+      if(pistasUsadas>=2){ mostrarFeedback(fb,'hint','Ya usaste las 2 pistas.'); return; }
+      const texto = pistasUsadas===0
+        ? 'Si tiene 2 pares de lados iguales, va en Paralelogramo. Si tiene 1 par, va en Trapecio.'
+        : 'Contá los pares de lados que van en la misma dirección.';
+      mostrarFeedback(fb,'hint', texto);
+      pistasUsadas++; container.querySelector('[data-hl]').textContent=(2-pistasUsadas);
+    });
+  };
+}
+
+// --- Tarjeta: unir con líneas descripción -> figura (click-click) ---
+function tarjetaUnirDescripcion(idTarjeta){
+  return function(container){
+    const consigna = 'Toca una descripción y después toca la figura que le corresponde.';
+    const pares = [
+      { idF:'cuadrado', texto:'Tengo 4 lados iguales y 2 pares de lados paralelos.' },
+      { idF:'trapecioIsosceles', texto:'Tengo 1 par de lados paralelos y soy simétrico.' },
+      { idF:'rectangulo', texto:'Tengo 2 pares de lados paralelos y todas mis esquinas son rectas.' },
+    ];
+    const izquierda = pares.slice().sort(()=>Math.random()-0.5);
+    const derecha = pares.slice().sort(()=>Math.random()-0.5);
+
+    container.innerHTML = `
+      <h2>Actividad: Unir</h2>
+      <p class="consigna">${consigna}</p>
+      <div class="match-wrap">
+        <div class="match-col" id="izq-${idTarjeta}"></div>
+        <div class="match-col" id="der-${idTarjeta}"></div>
+      </div>
+      <div class="actions-row">
+        <button class="btn-outline" data-a="escuchar">🔊 Escuchar</button>
+        <button class="btn-outline" data-a="pista">💡 Pista (<span data-hl>2</span>)</button>
+      </div>
+      <div class="feedback" id="fb-${idTarjeta}" role="status" aria-live="polite"></div>
+    `;
+    const izqCol=container.querySelector(`#izq-${idTarjeta}`), derCol=container.querySelector(`#der-${idTarjeta}`);
+    izquierda.forEach(p=>{
+      const el=document.createElement('div');
+      el.className='match-item'; el.textContent=p.texto; el.dataset.id=p.idF;
+      el.tabIndex=0; el.setAttribute('role','button'); el.setAttribute('aria-pressed','false');
+      izqCol.appendChild(el);
+    });
+    derecha.forEach(p=>{
+      const el=document.createElement('div');
+      el.className='match-item'; el.dataset.id=p.idF;
+      el.innerHTML = dibujarFiguraSVG(p.idF);
+      el.tabIndex=0; el.setAttribute('role','button');
+      el.setAttribute('aria-label', 'Figura: '+FIGURAS[p.idF].nombre);
+      derCol.appendChild(el);
+    });
+    const fb=container.querySelector(`#fb-${idTarjeta}`);
+    let seleccion=null, correctos=0, pistasUsadas=0;
+    hablar(consigna);
+
+    izqCol.querySelectorAll('.match-item').forEach(el=>{
+      const activar=()=>{
+        if(el.classList.contains('ok')) return;
+        izqCol.querySelectorAll('.match-item').forEach(x=>x.setAttribute('aria-pressed','false'));
+        el.setAttribute('aria-pressed','true'); seleccion=el;
+      };
+      el.addEventListener('click', activar);
+      el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();activar();} });
+    });
+    derCol.querySelectorAll('.match-item').forEach(el=>{
+      const activar=()=>{
+        if(!seleccion || el.classList.contains('ok')) return;
+        if(seleccion.dataset.id===el.dataset.id){
+          seleccion.classList.add('ok'); seleccion.setAttribute('aria-pressed','false');
+          el.classList.add('ok'); correctos++;
+          mostrarFeedback(fb,'ok', `¡Bien! (${correctos}/${pares.length})`);
+          seleccion=null;
+          if(correctos===pares.length){ marcarCompletada(idTarjeta); habilitarBotonSiguiente(container); }
+        } else {
+          el.classList.add('bad');
+          mostrarFeedback(fb,'bad','Esa unión no es. Probá otra vez.');
+          setTimeout(()=>el.classList.remove('bad'), 600);
+        }
+      };
+      el.addEventListener('click', activar);
+      el.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();activar();} });
+    });
+    container.querySelector('[data-a="escuchar"]').addEventListener('click', ()=> hablar(consigna));
+    container.querySelector('[data-a="pista"]').addEventListener('click', ()=>{
+      if(pistasUsadas>=2){ mostrarFeedback(fb,'hint','Ya usaste las 2 pistas.'); return; }
+      mostrarFeedback(fb,'hint', pistasUsadas===0 ? 'Leé despacio cada frase.' : 'Fijate si dice "1 par" o "2 pares" de lados paralelos.');
+      pistasUsadas++; container.querySelector('[data-hl]').textContent=(2-pistasUsadas);
+    });
+  };
+}
+
+// --- Tarjeta: completar la frase (fill-in-the-blank con botones) ---
+function tarjetaCompletarFrase(idTarjeta){
+  return function(container){
+    const idF = LISTA_FIGURAS[Math.floor(Math.random()*LISTA_FIGURAS.length)];
+    const fig = FIGURAS[idF];
+    const numeroCorrecto = fig.paresParalelos.length; // 1 o 2
+    const consigna = `Esta figura es un ${fig.nombre}. Completá la frase.`;
+    container.innerHTML = `
+      <h2>Actividad: Completar</h2>
+      <p class="consigna">${consigna}</p>
+      ${dibujarFiguraSVG(idF)}
+      <p class="consigna">Tiene ___ par o pares de lados paralelos.</p>
+      <div class="opciones" id="opts-${idTarjeta}">
+        <button class="opcion-btn" data-v="1">1 par</button>
+        <button class="opcion-btn" data-v="2">2 pares</button>
+      </div>
+      <div class="actions-row">
+        <button class="btn-outline" data-a="escuchar">🔊 Escuchar</button>
+        <button class="btn-outline" data-a="pista">💡 Pista (<span data-hl>2</span>)</button>
+      </div>
+      <div class="feedback" id="fb-${idTarjeta}" role="status" aria-live="polite"></div>
+    `;
+    const fb=container.querySelector(`#fb-${idTarjeta}`);
+    let pistasUsadas=0, resuelto=false;
+    hablar(consigna+' ¿Tiene 1 par o 2 pares de lados paralelos?');
+
+    container.querySelectorAll('.opcion-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        if(resuelto) return;
+        const v=parseInt(btn.dataset.v,10);
+        if(v===numeroCorrecto){
+          btn.classList.add('correcta');
+          mostrarFeedback(fb,'ok','¡Perfecto! Es correcto.');
+          resuelto=true;
+          marcarCompletada(idTarjeta);
+          habilitarBotonSiguiente(container);
+        } else {
+          btn.classList.add('incorrecta');
+          mostrarFeedback(fb,'bad','Casi. Contá de nuevo los pares de lados.');
+          setTimeout(()=>btn.classList.remove('incorrecta'), 700);
+        }
+      });
+    });
+    container.querySelector('[data-a="escuchar"]').addEventListener('click', ()=> hablar(consigna));
+    container.querySelector('[data-a="pista"]').addEventListener('click', ()=>{
+      if(pistasUsadas>=2){ mostrarFeedback(fb,'hint','Ya usaste las 2 pistas.'); return; }
+      const texto = pistasUsadas===0
+        ? (fig.grupo==='Paralelogramo' ? 'Esta figura es de la familia de los paralelogramos.' : 'Esta figura es un trapecio.')
+        : (fig.grupo==='Paralelogramo' ? 'Los paralelogramos tienen 2 pares de lados paralelos.' : 'Los trapecios tienen 1 par de lados paralelos.');
+      mostrarFeedback(fb,'hint', texto);
+      pistasUsadas++; container.querySelector('[data-hl]').textContent=(2-pistasUsadas);
+    });
+  };
+}
+
+// --- Tarjeta: resaltar/marcar lados paralelos tocando la figura ---
+function tarjetaResaltarLados(idTarjeta){
+  return function(container){
+    const idF = LISTA_FIGURAS[Math.floor(Math.random()*LISTA_FIGURAS.length)];
+    const fig = FIGURAS[idF];
+    const consigna = 'Toca dos lados que van en la misma dirección (paralelos). Se van a pintar de verde si aciertas.';
+    container.innerHTML = `
+      <h2>Actividad: Marcar lados paralelos</h2>
+      <p class="consigna">${consigna}</p>
+      <div id="figwrap-${idTarjeta}">${dibujarFiguraSVG(idF, {ladosClickables:true})}</div>
+      <p id="cuenta-${idTarjeta}" style="text-align:center;font-weight:700;">Pares encontrados: 0 de ${fig.paresParalelos.length}</p>
+      <div class="actions-row">
+        <button class="btn-outline" data-a="escuchar">🔊 Escuchar</button>
+        <button class="btn-outline" data-a="pista">💡 Pista (<span data-hl>2</span>)</button>
+      </div>
+      <div class="feedback" id="fb-${idTarjeta}" role="status" aria-live="polite"></div>
+    `;
+    const svg = container.querySelector(`#figwrap-${idTarjeta} svg`);
+    const fb = container.querySelector(`#fb-${idTarjeta}`);
+    const cuentaEl = container.querySelector(`#cuenta-${idTarjeta}`);
+    let seleccionado=null, encontrados=0, pistasUsadas=0;
+    hablar(consigna);
+
+    svg.querySelectorAll('.lado-clickable').forEach(lado=>{
+      lado.tabIndex=0; lado.setAttribute('role','button');
+      lado.setAttribute('aria-label', 'Lado '+lado.dataset.lado);
+      const activar=()=>{
+        const i = parseInt(lado.dataset.lado,10);
+        if(lado.classList.contains('lado-correcto')) return;
+        if(seleccionado===null){
+          seleccionado=lado; lado.classList.add('lado-seleccionado');
+          return;
+        }
+        const j = parseInt(seleccionado.dataset.lado,10);
+        if(i===j){ seleccionado=null; lado.classList.remove('lado-seleccionado'); return; }
+        const esPar = fig.paresParalelos.some(par=> (par[0]===i&&par[1]===j) || (par[0]===j&&par[1]===i));
+        if(esPar){
+          seleccionado.classList.remove('lado-seleccionado');
+          seleccionado.classList.add('lado-correcto');
+          lado.classList.add('lado-correcto');
+          seleccionado=null; encontrados++;
+          cuentaEl.textContent = `Pares encontrados: ${encontrados} de ${fig.paresParalelos.length}`;
+          mostrarFeedback(fb,'ok','¡Sí! Esos lados son paralelos.');
+          if(encontrados===fig.paresParalelos.length){ marcarCompletada(idTarjeta); habilitarBotonSiguiente(container); }
+        } else {
+          mostrarFeedback(fb,'bad','Esos lados no van igual. Mirá otra vez.');
+          seleccionado.classList.remove('lado-seleccionado');
+          seleccionado=null;
+        }
+      };
+      lado.addEventListener('click', activar);
+      lado.addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();activar();} });
+    });
+    container.querySelector('[data-a="escuchar"]').addEventListener('click', ()=> hablar(consigna));
+    container.querySelector('[data-a="pista"]').addEventListener('click', ()=>{
+      if(pistasUsadas>=2){ mostrarFeedback(fb,'hint','Ya usaste las 2 pistas.'); return; }
+      mostrarFeedback(fb,'hint', pistasUsadas===0 ? 'Los lados paralelos nunca se juntan, van siempre separados igual.' : 'Fijate cuáles lados están uno arriba y uno abajo, bien derechitos.');
+      pistasUsadas++; container.querySelector('[data-hl]').textContent=(2-pistasUsadas);
+    });
+  };
+}
+
+/* Botón "Siguiente" que aparece al resolver la tarjeta */
+function habilitarBotonSiguiente(container){
+  if(container.querySelector('#btn-siguiente')) return;
+  const fila=document.createElement('div');
+  fila.className='actions-row';
+  fila.innerHTML = `<button class="btn-accent btn-grande" id="btn-siguiente">➡️ Siguiente</button>`;
+  container.appendChild(fila);
+  document.getElementById('btn-siguiente').addEventListener('click', irSiguienteTarjeta);
+  hablar('Muy bien. Tocá siguiente para continuar.');
+}
+
+/* ================================================================
+   LISTA DE LAS 12 TARJETAS EN ORDEN
+   ================================================================ */
+const TARJETAS = [
+  { id:'t1', construir: tarjetaArrastrarNombre('t1','paralelogramo', ['paralelogramo','rombo','cuadrado']) },
+  { id:'t2', construir: tarjetaArrastrarNombre('t2','rectangulo', ['rectángulo','cuadrado','rombo']) },
+  { id:'t3', construir: tarjetaArrastrarNombre('t3','rombo', ['rombo','cuadrado','paralelogramo']) },
+  { id:'t4', construir: tarjetaArrastrarNombre('t4','cuadrado', ['cuadrado','rectángulo','rombo']) },
+  { id:'t5', construir: tarjetaArrastrarNombre('t5','trapecioIsosceles', ['trapecio isósceles','trapecio rectángulo','trapecio escaleno']) },
+  { id:'t6', construir: tarjetaArrastrarNombre('t6','trapecioRectangulo', ['trapecio rectángulo','trapecio isósceles','trapecio escaleno']) },
+  { id:'t7', construir: tarjetaArrastrarNombre('t7','trapecioEscaleno', ['trapecio escaleno','trapecio isósceles','trapecio rectángulo']) },
+  { id:'t8', construir: tarjetaClasificar('t8') },
+  { id:'t9', construir: tarjetaUnirDescripcion('t9') },
+  { id:'t10', construir: tarjetaCompletarFrase('t10') },
+  { id:'t11', construir: tarjetaElegirImagen('t11') },
+  { id:'t12', construir: tarjetaResaltarLados('t12') },
+];
+
+/* ================================================================
+   6. NAVEGACIÓN, PROGRESO, TEMPORIZADOR
+   ================================================================ */
+function mostrarPantalla(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function actualizarProgreso(){
+  const total = TARJETAS.length;
+  const hechas = Object.keys(ESTADO.completadas).length;
+  document.getElementById('progress-fill').style.width = (100*hechas/total)+'%';
+}
+function irTarjeta(indice){
+  ESTADO.tarjetaActual = indice;
+  const cont = document.getElementById('actividad-container');
+  cont.innerHTML='';
+  document.getElementById('tarjeta-num').textContent = `Tarjeta ${indice+1} de ${TARJETAS.length}`;
+  TARJETAS[indice].construir(cont);
+  actualizarProgreso();
+  mostrarPantalla('screen-actividad');
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+function irSiguienteTarjeta(){
+  if(ESTADO.tarjetaActual < TARJETAS.length-1){
+    irTarjeta(ESTADO.tarjetaActual+1);
+  } else {
+    mostrarFinal();
+  }
+}
+
+let segundos=0, intervaloTiempo=null;
+function formatoTiempo(s){ const m=Math.floor(s/60).toString().padStart(2,'0'); const ss=(s%60).toString().padStart(2,'0'); return `${m}:${ss}`; }
+function iniciarTiempo(){
+  if(intervaloTiempo) return;
+  intervaloTiempo = setInterval(()=>{
+    segundos++;
+    document.getElementById('footer-tiempo').textContent = formatoTiempo(segundos);
+  },1000);
+}
+function reiniciarTiempo(){ segundos=0; document.getElementById('footer-tiempo').textContent='00:00'; }
+
+document.getElementById('btn-empezar').addEventListener('click', ()=>{
+  ESTADO.completadas={};
+  iniciarTiempo();
+  irTarjeta(0);
+});
+document.getElementById('btn-otra-vez').addEventListener('click', ()=>{
+  ESTADO.completadas={};
+  reiniciarTiempo(); iniciarTiempo();
+  irTarjeta(0);
+});
+document.getElementById('btn-volver-inicio').addEventListener('click', ()=>{
+  clearInterval(intervaloTiempo); intervaloTiempo=null;
+  mostrarPantalla('screen-inicio');
+});
+
+function mostrarFinal(){
+  clearInterval(intervaloTiempo); intervaloTiempo=null;
+  document.getElementById('final-tiempo').textContent = formatoTiempo(segundos);
+  const hechas = Object.keys(ESTADO.completadas).length;
+  const msg = hechas===TARJETAS.length
+    ? '¡Hiciste todas las actividades! Estás aprendiendo muy bien las figuras.'
+    : `¡Muy bien! Completaste ${hechas} de ${TARJETAS.length} actividades.`;
+  document.getElementById('final-msg').textContent = msg;
+  hablar('¡Terminaste! '+msg);
+  mostrarPantalla('screen-final');
+}
+
+/* ================================================================
+   7. CONTROLES DE ACCESIBILIDAD (voz, tamaño de letra, contraste)
+   ================================================================ */
+let tamanoFuente = CONFIG.FUENTE_INICIAL_PX;
+function aplicarFuente(){ document.documentElement.style.setProperty('--fs-base', tamanoFuente+'px'); }
+document.getElementById('btn-mas').addEventListener('click', ()=>{ tamanoFuente=Math.min(tamanoFuente+2,32); aplicarFuente(); });
+document.getElementById('btn-menos').addEventListener('click', ()=>{ tamanoFuente=Math.max(tamanoFuente-2,16); aplicarFuente(); });
+
+document.getElementById('btn-contraste').addEventListener('click', function(){
+  const activo = document.body.classList.toggle('alto-contraste');
+  this.setAttribute('aria-pressed', String(activo));
+});
+
+document.getElementById('btn-voz').addEventListener('click', function(){
+  vozActivada = !vozActivada;
+  this.setAttribute('aria-pressed', String(vozActivada));
+  this.textContent = vozActivada ? '🔊 Voz' : '🔇 Voz';
+  if(!vozActivada && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+});
+
+/* ================================================================
+   8. GUARDAR / CONTINUAR (localStorage)
+   ================================================================ */
+const LS_KEY = 'jugamosConFigurasProgreso';
+document.getElementById('btn-guardar').addEventListener('click', ()=>{
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({ tarjeta:ESTADO.tarjetaActual, completadas:ESTADO.completadas, segundos }));
+    alert('Guardado. La próxima vez tocá "Continuar donde quedé".');
+  }catch(e){ alert('No se pudo guardar en este navegador.'); }
+});
+document.getElementById('btn-continuar-inicio').addEventListener('click', ()=>{
+  const raw = localStorage.getItem(LS_KEY);
+  if(!raw){ alert('Todavía no hay nada guardado.'); return; }
+  try{
+    const data = JSON.parse(raw);
+    ESTADO.completadas = data.completadas || {};
+    segundos = data.segundos || 0;
+    document.getElementById('footer-tiempo').textContent = formatoTiempo(segundos);
+    iniciarTiempo();
+    irTarjeta(data.tarjeta || 0);
+  }catch(e){ alert('No se pudo leer lo guardado.'); }
+});
+
+/* Estado inicial de accesibilidad */
+aplicarFuente();
+document.getElementById('btn-voz').setAttribute('aria-pressed', String(vozActivada));
+if(!vozActivada) document.getElementById('btn-voz').textContent = '🔇 Voz';
+</script>
+</body>
+</html>
